@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <libgfx/fonts.h>
+#include <libui/libui.h>
 #include <stdint.h>
 
 #define FONT_FIRST_CHAR 32
@@ -945,7 +945,7 @@ static const uint8_t font_atlas[FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-static const gfx_glyph_t font_glyphs[FONT_LAST_CHAR - FONT_FIRST_CHAR + 1] = {
+static const bui_glyph_t font_glyphs[FONT_LAST_CHAR - FONT_FIRST_CHAR + 1] = {
     {.x = 0, .y = 0, .width = 3, .height = 0, .x_offset = 0, .y_offset = 0, .x_advance = 4},
     {.x = 1, .y = 1, .width = 4, .height = 10, .x_offset = 0, .y_offset = -10, .x_advance = 5},
     {.x = 6, .y = 1, .width = 6, .height = 11, .x_offset = 0, .y_offset = -11, .x_advance = 7},

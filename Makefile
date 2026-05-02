@@ -11,8 +11,7 @@ DEMO_NAME := uidemo
 
 SRC := \
 	src/libui.c \
-	src/gfx.c \
-	src/fonts.c
+	src/backends/sdl3.c
 OBJ := $(SRC:%.c=$(BUILD_DIR)/%.o)
 DEP := $(OBJ:.o=.d)
 

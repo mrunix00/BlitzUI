@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0
  */
 
-#include <SDL3/SDL.h>
+#include <libui/backend.h>
 #include <libui/libui.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -14,20 +14,22 @@
 #define INITIAL_STACK_CAPACITY 16
 
 #define DEFAULT_PADDING 7
-#define BACKGROUND_COLOR (gfx_color_t){0xFF, 0x21, 0x21, 0x21}
-#define SECONDARY_BACKGROUND_COLOR (gfx_color_t){0xFF, 0x18, 0x18, 0x18}
-#define TEXT_COLOR (gfx_color_t){0xFF, 0xB3, 0xB3, 0xB3}
-#define BORDER_COLOR (gfx_color_t){0xFF, 0x00, 0x00, 0x00}
+#define BACKGROUND_COLOR (bui_color_t){0xFF, 0x21, 0x21, 0x21}
+#define SECONDARY_BACKGROUND_COLOR (bui_color_t){0xFF, 0x18, 0x18, 0x18}
+#define TEXT_COLOR (bui_color_t){0xFF, 0xB3, 0xB3, 0xB3}
+#define BORDER_COLOR (bui_color_t){0xFF, 0x00, 0x00, 0x00}
 #define BORDER_THICKNESS 1
-#define BORDER_SHADOW (gfx_color_t){0x33, 0xFF, 0xFF, 0xFF}
+#define BORDER_SHADOW (bui_color_t){0x33, 0xFF, 0xFF, 0xFF}
 
-static gfx_font_t _default_font = {
+static bui_font_t _default_font = {
     .atlas = font_atlas,
-    .atlas_size = {FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT},
+    .atlas_width = FONT_ATLAS_WIDTH,
+    .atlas_height = FONT_ATLAS_HEIGHT,
     .glyphs = font_glyphs,
     .first_char = FONT_FIRST_CHAR,
     .last_char = FONT_LAST_CHAR,
-    .size = {13, FONT_LINE_HEIGHT},
+    .width = 13,
+    .height = FONT_LINE_HEIGHT,
 };
 
 static inline uint32_t _sub_or_zero(uint32_t lhs, uint32_t rhs)
@@ -46,208 +48,15 @@ static ui_wctx_t *_ui_find_window_by_id(ui_ctx_t *ctx, uint32_t window_id)
     return NULL;
 }
 
-static input_keyboard_scancode_t _ui_translate_scancode(SDL_Scancode scancode)
-{
-    switch (scancode) {
-    case SDL_SCANCODE_ESCAPE:
-        return INPUT_KEYBOARD_SCANCODE_ESCAPE;
-    case SDL_SCANCODE_1:
-        return INPUT_KEYBOARD_SCANCODE_1;
-    case SDL_SCANCODE_2:
-        return INPUT_KEYBOARD_SCANCODE_2;
-    case SDL_SCANCODE_3:
-        return INPUT_KEYBOARD_SCANCODE_3;
-    case SDL_SCANCODE_4:
-        return INPUT_KEYBOARD_SCANCODE_4;
-    case SDL_SCANCODE_5:
-        return INPUT_KEYBOARD_SCANCODE_5;
-    case SDL_SCANCODE_6:
-        return INPUT_KEYBOARD_SCANCODE_6;
-    case SDL_SCANCODE_7:
-        return INPUT_KEYBOARD_SCANCODE_7;
-    case SDL_SCANCODE_8:
-        return INPUT_KEYBOARD_SCANCODE_8;
-    case SDL_SCANCODE_9:
-        return INPUT_KEYBOARD_SCANCODE_9;
-    case SDL_SCANCODE_0:
-        return INPUT_KEYBOARD_SCANCODE_0;
-    case SDL_SCANCODE_MINUS:
-        return INPUT_KEYBOARD_SCANCODE_MINUS;
-    case SDL_SCANCODE_EQUALS:
-        return INPUT_KEYBOARD_SCANCODE_EQUALS;
-    case SDL_SCANCODE_BACKSPACE:
-        return INPUT_KEYBOARD_SCANCODE_BACKSPACE;
-    case SDL_SCANCODE_TAB:
-        return INPUT_KEYBOARD_SCANCODE_TAB;
-    case SDL_SCANCODE_Q:
-        return INPUT_KEYBOARD_SCANCODE_Q;
-    case SDL_SCANCODE_W:
-        return INPUT_KEYBOARD_SCANCODE_W;
-    case SDL_SCANCODE_E:
-        return INPUT_KEYBOARD_SCANCODE_E;
-    case SDL_SCANCODE_R:
-        return INPUT_KEYBOARD_SCANCODE_R;
-    case SDL_SCANCODE_T:
-        return INPUT_KEYBOARD_SCANCODE_T;
-    case SDL_SCANCODE_Y:
-        return INPUT_KEYBOARD_SCANCODE_Y;
-    case SDL_SCANCODE_U:
-        return INPUT_KEYBOARD_SCANCODE_U;
-    case SDL_SCANCODE_I:
-        return INPUT_KEYBOARD_SCANCODE_I;
-    case SDL_SCANCODE_O:
-        return INPUT_KEYBOARD_SCANCODE_O;
-    case SDL_SCANCODE_P:
-        return INPUT_KEYBOARD_SCANCODE_P;
-    case SDL_SCANCODE_LEFTBRACKET:
-        return INPUT_KEYBOARD_SCANCODE_LBRACKET;
-    case SDL_SCANCODE_RIGHTBRACKET:
-        return INPUT_KEYBOARD_SCANCODE_RBRACKET;
-    case SDL_SCANCODE_RETURN:
-        return INPUT_KEYBOARD_SCANCODE_ENTER;
-    case SDL_SCANCODE_LCTRL:
-        return INPUT_KEYBOARD_SCANCODE_LCTRL;
-    case SDL_SCANCODE_A:
-        return INPUT_KEYBOARD_SCANCODE_A;
-    case SDL_SCANCODE_S:
-        return INPUT_KEYBOARD_SCANCODE_S;
-    case SDL_SCANCODE_D:
-        return INPUT_KEYBOARD_SCANCODE_D;
-    case SDL_SCANCODE_F:
-        return INPUT_KEYBOARD_SCANCODE_F;
-    case SDL_SCANCODE_G:
-        return INPUT_KEYBOARD_SCANCODE_G;
-    case SDL_SCANCODE_H:
-        return INPUT_KEYBOARD_SCANCODE_H;
-    case SDL_SCANCODE_J:
-        return INPUT_KEYBOARD_SCANCODE_J;
-    case SDL_SCANCODE_K:
-        return INPUT_KEYBOARD_SCANCODE_K;
-    case SDL_SCANCODE_L:
-        return INPUT_KEYBOARD_SCANCODE_L;
-    case SDL_SCANCODE_SEMICOLON:
-        return INPUT_KEYBOARD_SCANCODE_SEMICOLON;
-    case SDL_SCANCODE_APOSTROPHE:
-        return INPUT_KEYBOARD_SCANCODE_APOSTROPHE;
-    case SDL_SCANCODE_GRAVE:
-        return INPUT_KEYBOARD_SCANCODE_BACKTICK;
-    case SDL_SCANCODE_LSHIFT:
-        return INPUT_KEYBOARD_SCANCODE_LSHIFT;
-    case SDL_SCANCODE_BACKSLASH:
-        return INPUT_KEYBOARD_SCANCODE_BACKSLASH;
-    case SDL_SCANCODE_Z:
-        return INPUT_KEYBOARD_SCANCODE_Z;
-    case SDL_SCANCODE_X:
-        return INPUT_KEYBOARD_SCANCODE_X;
-    case SDL_SCANCODE_C:
-        return INPUT_KEYBOARD_SCANCODE_C;
-    case SDL_SCANCODE_V:
-        return INPUT_KEYBOARD_SCANCODE_V;
-    case SDL_SCANCODE_B:
-        return INPUT_KEYBOARD_SCANCODE_B;
-    case SDL_SCANCODE_N:
-        return INPUT_KEYBOARD_SCANCODE_N;
-    case SDL_SCANCODE_M:
-        return INPUT_KEYBOARD_SCANCODE_M;
-    case SDL_SCANCODE_COMMA:
-        return INPUT_KEYBOARD_SCANCODE_COMMA;
-    case SDL_SCANCODE_PERIOD:
-        return INPUT_KEYBOARD_SCANCODE_PERIOD;
-    case SDL_SCANCODE_SLASH:
-        return INPUT_KEYBOARD_SCANCODE_SLASH;
-    case SDL_SCANCODE_RSHIFT:
-        return INPUT_KEYBOARD_SCANCODE_RSHIFT;
-    case SDL_SCANCODE_LALT:
-        return INPUT_KEYBOARD_SCANCODE_LALT;
-    case SDL_SCANCODE_SPACE:
-        return INPUT_KEYBOARD_SCANCODE_SPACE;
-    case SDL_SCANCODE_CAPSLOCK:
-        return INPUT_KEYBOARD_SCANCODE_CAPSLOCK;
-    case SDL_SCANCODE_F1:
-        return INPUT_KEYBOARD_SCANCODE_F1;
-    case SDL_SCANCODE_F2:
-        return INPUT_KEYBOARD_SCANCODE_F2;
-    case SDL_SCANCODE_F3:
-        return INPUT_KEYBOARD_SCANCODE_F3;
-    case SDL_SCANCODE_F4:
-        return INPUT_KEYBOARD_SCANCODE_F4;
-    case SDL_SCANCODE_F5:
-        return INPUT_KEYBOARD_SCANCODE_F5;
-    case SDL_SCANCODE_F6:
-        return INPUT_KEYBOARD_SCANCODE_F6;
-    case SDL_SCANCODE_F7:
-        return INPUT_KEYBOARD_SCANCODE_F7;
-    case SDL_SCANCODE_F8:
-        return INPUT_KEYBOARD_SCANCODE_F8;
-    case SDL_SCANCODE_F9:
-        return INPUT_KEYBOARD_SCANCODE_F9;
-    case SDL_SCANCODE_F10:
-        return INPUT_KEYBOARD_SCANCODE_F10;
-    case SDL_SCANCODE_F11:
-        return INPUT_KEYBOARD_SCANCODE_F11;
-    case SDL_SCANCODE_F12:
-        return INPUT_KEYBOARD_SCANCODE_F12;
-    case SDL_SCANCODE_UP:
-        return INPUT_KEYBOARD_SCANCODE_UP;
-    case SDL_SCANCODE_LEFT:
-        return INPUT_KEYBOARD_SCANCODE_LEFT;
-    case SDL_SCANCODE_RIGHT:
-        return INPUT_KEYBOARD_SCANCODE_RIGHT;
-    case SDL_SCANCODE_DOWN:
-        return INPUT_KEYBOARD_SCANCODE_DOWN;
-    case SDL_SCANCODE_DELETE:
-        return INPUT_KEYBOARD_SCANCODE_DELETE;
-    default:
-        return INPUT_KEYBOARD_SCANCODE_NULL;
-    }
-}
-
 static void _ui_clear_transient_events(ui_ctx_t *ctx)
 {
     for (ui_wctx_t *wctx = ctx->first_window; wctx; wctx = wctx->next)
-        wctx->last_event = (input_event_t){0};
-}
-
-static bool _ui_resize_window(ui_wctx_t *wctx, int width, int height)
-{
-    if (width <= 0 || height <= 0)
-        return false;
-
-    uint32_t *new_backbuffer
-        = realloc(wctx->framebuffer.backbuffer, (size_t) width * (size_t) height * sizeof(uint32_t));
-    if (!new_backbuffer)
-        return false;
-
-    SDL_Texture *old_texture = (SDL_Texture *) wctx->framebuffer.native_texture;
-    if (old_texture)
-        SDL_DestroyTexture(old_texture);
-
-    SDL_Texture *texture = SDL_CreateTexture(
-        (SDL_Renderer *) wctx->framebuffer.native_renderer,
-        SDL_PIXELFORMAT_ARGB8888,
-        SDL_TEXTUREACCESS_STREAMING,
-        width,
-        height);
-    if (!texture)
-        return false;
-
-    wctx->width = width;
-    wctx->height = height;
-    wctx->framebuffer.backbuffer = new_backbuffer;
-    wctx->framebuffer.framebuffer = new_backbuffer;
-    wctx->framebuffer.width = (size_t) width;
-    wctx->framebuffer.height = (size_t) height;
-    wctx->framebuffer.pitch = (size_t) width * sizeof(uint32_t);
-    wctx->framebuffer.native_texture = texture;
-    gfx_reset_clip(&wctx->framebuffer);
-    return true;
+        wctx->last_event = (bui_event_t){0};
 }
 
 bool ui_init_context(ui_ctx_t *ctx)
 {
     memset(ctx, 0, sizeof(ui_ctx_t));
-    if (!SDL_Init(SDL_INIT_VIDEO))
-        return false;
     ctx->running = true;
     return true;
 }
@@ -260,7 +69,6 @@ void ui_deinit_context(ui_ctx_t *ctx)
         ui_destroy_window(ctx, current);
         current = next;
     }
-    SDL_Quit();
 }
 
 ui_wctx_t *ui_new_window(ui_ctx_t *ctx, const char *title, int w, int h, window_flags_t flags)
@@ -269,80 +77,29 @@ ui_wctx_t *ui_new_window(ui_ctx_t *ctx, const char *title, int w, int h, window_
     if (!wctx)
         return NULL;
 
-    SDL_WindowFlags sdl_flags = flags.resizable ? SDL_WINDOW_RESIZABLE : 0;
-    SDL_Window *window = SDL_CreateWindow(title, w, h, sdl_flags);
-    if (!window) {
-        free(wctx);
-        return NULL;
-    }
-
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
-    if (!renderer) {
-        SDL_DestroyWindow(window);
-        free(wctx);
-        return NULL;
-    }
-
-    SDL_Texture *texture
-        = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, w, h);
-    if (!texture) {
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        free(wctx);
-        return NULL;
-    }
-
-    uint32_t *backbuffer = calloc((size_t) w * (size_t) h, sizeof(uint32_t));
-    if (!backbuffer) {
-        SDL_DestroyTexture(texture);
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        free(wctx);
-        return NULL;
-    }
-
     wctx->title = title;
+    wctx->flags = flags;
     wctx->width = w;
     wctx->height = h;
-    wctx->create_sequence = (uint32_t) SDL_GetWindowID(window);
     wctx->state = UI_WINDOW_STATE_ACTIVE;
-    wctx->window_id = (uint32_t) SDL_GetWindowID(window);
-    wctx->framebuffer = (gfx_context_t){
-        .framebuffer = backbuffer,
-        .backbuffer = backbuffer,
-        .width = (size_t) w,
-        .height = (size_t) h,
-        .pitch = (size_t) w * sizeof(uint32_t),
-        .bpp = 32,
-        .memory_model = 1,
-        .red_mask_size = 8,
-        .red_mask_shift = 16,
-        .green_mask_size = 8,
-        .green_mask_shift = 8,
-        .blue_mask_size = 8,
-        .blue_mask_shift = 0,
-        .fps_last_update_ticks = SDL_GetTicks(),
-        .clip_rect = {0, 0, (uint32_t) w, (uint32_t) h},
-        .native_window = window,
-        .native_renderer = renderer,
-        .native_texture = texture,
-    };
 
-    wctx->layout_stack = malloc(INITIAL_STACK_CAPACITY * sizeof(ui_layout_t));
+    if (!bui_gfx_init(wctx)) {
+        free(wctx);
+        return NULL;
+    }
+
+    wctx->layout_stack = malloc(INITIAL_STACK_CAPACITY * sizeof(bui_layout_t));
     if (wctx->layout_stack == NULL) {
-        free(backbuffer);
-        SDL_DestroyTexture(texture);
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
+        bui_gfx_destroy(wctx);
         free(wctx);
         return NULL;
     }
     wctx->layout_count = 0;
     wctx->layout_capacity = INITIAL_STACK_CAPACITY;
 
-    for (size_t i = 0; i < 256; i++)
-        wctx->keyboard_keys[i] = INPUT_KEYACTION_UP;
-    wctx->mouse_state = (ui_mouse_state_t){0};
+    // for (size_t i = 0; i < 256; i++)
+    //     wctx->keyboard_keys[i] = BUI_INPUT_KEYACTION_UP;
+    // wctx->mouse_state = (ui_mouse_state_t){0};
 
     wctx->next = ctx->first_window;
     if (ctx->first_window)
@@ -363,16 +120,7 @@ void ui_destroy_window(ui_ctx_t *ctx, ui_wctx_t *wctx)
     if (ctx->first_window == wctx)
         ctx->first_window = wctx->next;
 
-    SDL_Texture *texture = (SDL_Texture *) wctx->framebuffer.native_texture;
-    SDL_Renderer *renderer = (SDL_Renderer *) wctx->framebuffer.native_renderer;
-    SDL_Window *window = (SDL_Window *) wctx->framebuffer.native_window;
-    if (texture)
-        SDL_DestroyTexture(texture);
-    if (renderer)
-        SDL_DestroyRenderer(renderer);
-    if (window)
-        SDL_DestroyWindow(window);
-    free(wctx->framebuffer.backbuffer);
+    bui_gfx_destroy(wctx);
     free(wctx->layout_stack);
     free(wctx);
 }
@@ -384,98 +132,65 @@ bool ui_pump_events(ui_ctx_t *ctx)
 
     _ui_clear_transient_events(ctx);
 
-    SDL_Event event;
-    if (!SDL_PollEvent(&event)) {
-        SDL_Delay(1);
+    bui_event_t event = {0};
+    if (!bui_poll_events(&event)) {
+        bui_delay(1);
         return true;
     }
 
-    if (event.type == SDL_EVENT_QUIT) {
+    ui_wctx_t *wctx = _ui_find_window_by_id(ctx, event.window_id);
+    if (!wctx && event.type != BUI_EVENT_WINDOW_CLOSED)
+        return true;
+
+    if (wctx)
+        wctx->last_event = event;
+
+    if (event.type == BUI_EVENT_WINDOW_CLOSED) {
+        if (wctx) {
+            wctx->close_requested = true;
+            wctx->state = UI_WINDOW_STATE_PENDING;
+        }
         ctx->running = false;
         return false;
     }
 
-    uint32_t window_id = 0;
-    if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST)
-        window_id = event.window.windowID;
-    else if (event.type == SDL_EVENT_MOUSE_MOTION)
-        window_id = event.motion.windowID;
-    else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP)
-        window_id = event.button.windowID;
-    else if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
-        window_id = event.key.windowID;
-    else if (event.type == SDL_EVENT_TEXT_INPUT)
-        window_id = event.text.windowID;
-
-    ui_wctx_t *wctx = window_id ? _ui_find_window_by_id(ctx, window_id) : ctx->first_window;
     if (!wctx)
         return true;
 
-    if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
-        wctx->close_requested = true;
-        wctx->state = UI_WINDOW_STATE_PENDING;
-        ctx->running = false;
-        return false;
-    }
-
-    if (event.type == SDL_EVENT_WINDOW_RESIZED) {
-        return _ui_resize_window(wctx, event.window.data1, event.window.data2);
-    }
-
-    if (event.type == SDL_EVENT_MOUSE_MOTION) {
-        wctx->mouse_state.pos_x = (uint32_t) event.motion.x;
-        wctx->mouse_state.pos_y = (uint32_t) event.motion.y;
-        wctx->last_event.type = INPUT_EVENT_MOUSE;
-        wctx->last_event.data.mouse.x = (int32_t) event.motion.x;
-        wctx->last_event.data.mouse.y = (int32_t) event.motion.y;
-        wctx->last_event.data.mouse.delta_x = (int8_t) event.motion.xrel;
-        wctx->last_event.data.mouse.delta_y = (int8_t) event.motion.yrel;
-        wctx->last_event.data.mouse.buttons = wctx->mouse_state.buttons_state;
-        return true;
-    }
-
-    if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
-        uint8_t bit = 0;
-        if (event.button.button == SDL_BUTTON_LEFT)
-            bit = INPUT_MOUSE_BUTTON_LEFT;
-        else if (event.button.button == SDL_BUTTON_RIGHT)
-            bit = INPUT_MOUSE_BUTTON_RIGHT;
-        else if (event.button.button == SDL_BUTTON_MIDDLE)
-            bit = INPUT_MOUSE_BUTTON_MIDDLE;
-
-        if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
-            wctx->mouse_state.buttons_state |= bit;
-        else
-            wctx->mouse_state.buttons_state &= (uint8_t) ~bit;
-
-        wctx->mouse_state.pos_x = (uint32_t) event.button.x;
-        wctx->mouse_state.pos_y = (uint32_t) event.button.y;
-        wctx->last_event.type = INPUT_EVENT_MOUSE;
-        wctx->last_event.data.mouse.x = (int32_t) event.button.x;
-        wctx->last_event.data.mouse.y = (int32_t) event.button.y;
-        wctx->last_event.data.mouse.buttons = wctx->mouse_state.buttons_state;
-        return true;
-    }
-
-    if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP) {
-        input_keyboard_scancode_t scancode = _ui_translate_scancode(event.key.scancode);
-        if (scancode != INPUT_KEYBOARD_SCANCODE_NULL) {
-            input_keyboard_action_t action = event.type == SDL_EVENT_KEY_UP
-                                                 ? INPUT_KEYACTION_UP
-                                                 : (event.key.repeat ? INPUT_KEYACTION_HOLD
-                                                                     : INPUT_KEYACTION_DOWN);
-            wctx->keyboard_keys[scancode] = action;
-            wctx->last_event.type = INPUT_EVENT_KEYBOARD;
-            wctx->last_event.data.keyboard.scancode = scancode;
-            wctx->last_event.data.keyboard.action = action;
-        }
-        return true;
-    }
-
-    if (event.type == SDL_EVENT_TEXT_INPUT) {
-        wctx->last_event.type = INPUT_EVENT_TEXT;
-        SDL_strlcpy(wctx->last_event.data.text, event.text.text, sizeof(wctx->last_event.data.text));
-        return true;
+    switch (event.type) {
+    case BUI_EVENT_WINDOW_CREATED:
+    case BUI_EVENT_WINDOW_RESIZED:
+        wctx->width = event.window_resized.width;
+        wctx->height = event.window_resized.height;
+        break;
+    case BUI_EVENT_KEY_DOWN:
+        if (event.keyboard < 256)
+            wctx->keyboard_keys[event.keyboard] = BUI_KEY_STATE_DOWN;
+        break;
+    case BUI_EVENT_KEY_HOLD:
+        if (event.keyboard < 256)
+            wctx->keyboard_keys[event.keyboard] = BUI_KEY_STATE_HOLD;
+        break;
+    case BUI_EVENT_KEY_UP:
+        if (event.keyboard < 256)
+            wctx->keyboard_keys[event.keyboard] = BUI_KEY_STATE_UP;
+        break;
+    case BUI_EVENT_MOUSE_MOVE:
+        wctx->mouse_state.pos_x = event.mouse_move.pos_x;
+        wctx->mouse_state.pos_y = event.mouse_move.pos_y;
+        break;
+    case BUI_EVENT_MOUSE_BUTTON_DOWN:
+        wctx->mouse_state.pos_x = event.mouse_button.pos_x;
+        wctx->mouse_state.pos_y = event.mouse_button.pos_y;
+        wctx->mouse_state.buttons_state |= event.mouse_button.button;
+        break;
+    case BUI_EVENT_MOUSE_BUTTON_UP:
+        wctx->mouse_state.pos_x = event.mouse_button.pos_x;
+        wctx->mouse_state.pos_y = event.mouse_button.pos_y;
+        wctx->mouse_state.buttons_state &= (uint8_t) ~event.mouse_button.button;
+        break;
+    default:
+        break;
     }
 
     return true;
@@ -487,18 +202,17 @@ bool ui_begin_window(ui_wctx_t *wctx)
         return false;
 
     wctx->layout_count = 0;
-    gfx_context_t *framebuffer = &wctx->framebuffer;
-    gfx_begin_frame(framebuffer);
-    gfx_reset_clip(framebuffer);
-    gfx_draw_filled_rect(
-        framebuffer,
-        (gfx_rect_t){.x = 0, .y = 0, .width = framebuffer->width, .height = framebuffer->height},
+    bui_begin_frame(wctx);
+    bui_reset_clip(wctx);
+    bui_draw_filled_rect(
+        wctx,
+        (bui_rect_t){.x = 0, .y = 0, .width = wctx->width, .height = wctx->height},
         BACKGROUND_COLOR);
     ui_push_layout(
         wctx,
-        (ui_layout_t){
+        (bui_layout_t){
             .type = UI_LAYOUT_VERTICAL,
-            .size = (gfx_area_t){0, 0, framebuffer->width, framebuffer->height},
+            .size = (bui_area_t){0, 0, wctx->width, wctx->height},
             .cursor_pos_x = 0,
             .cursor_pos_y = 0,
             .padding_x = 0,
@@ -513,15 +227,15 @@ bool ui_end_window(ui_wctx_t *wctx)
 {
     if (!wctx || wctx->state != UI_WINDOW_STATE_ACTIVE)
         return false;
-    gfx_end_frame(&wctx->framebuffer);
+    bui_end_frame(wctx);
     return true;
 }
 
-bool ui_push_layout(ui_wctx_t *wctx, ui_layout_t layout)
+bool ui_push_layout(ui_wctx_t *wctx, bui_layout_t layout)
 {
     if (wctx->layout_count >= wctx->layout_capacity) {
         size_t new_capacity = wctx->layout_capacity * 2;
-        ui_layout_t *new_stack = realloc(wctx->layout_stack, new_capacity * sizeof(ui_layout_t));
+        bui_layout_t *new_stack = realloc(wctx->layout_stack, new_capacity * sizeof(bui_layout_t));
         if (new_stack == NULL)
             return false;
         wctx->layout_stack = new_stack;
@@ -531,7 +245,7 @@ bool ui_push_layout(ui_wctx_t *wctx, ui_layout_t layout)
     return true;
 }
 
-ui_layout_t *ui_get_layout(ui_wctx_t *wctx)
+bui_layout_t *ui_get_layout(ui_wctx_t *wctx)
 {
     if (!wctx || wctx->layout_count == 0)
         return NULL;
@@ -540,7 +254,7 @@ ui_layout_t *ui_get_layout(ui_wctx_t *wctx)
 
 void ui_advance_layout(ui_wctx_t *wctx, uint32_t w, uint32_t h)
 {
-    ui_layout_t *current = ui_get_layout(wctx);
+    bui_layout_t *current = ui_get_layout(wctx);
     if (!current)
         return;
     if (current->type == UI_LAYOUT_HORIZONTAL) {
@@ -562,11 +276,11 @@ void ui_advance_layout(ui_wctx_t *wctx, uint32_t w, uint32_t h)
     }
 }
 
-ui_layout_t ui_pop_layout(ui_wctx_t *wctx)
+bui_layout_t ui_pop_layout(ui_wctx_t *wctx)
 {
     if (!wctx || wctx->layout_count == 0)
-        return (ui_layout_t){0};
-    ui_layout_t result = wctx->layout_stack[--wctx->layout_count];
+        return (bui_layout_t){0};
+    bui_layout_t result = wctx->layout_stack[--wctx->layout_count];
     if (result.fit_width)
         result.size.width = result.content_width + result.inner_margin.l + result.inner_margin.r;
     if (result.fit_height)
@@ -574,9 +288,9 @@ ui_layout_t ui_pop_layout(ui_wctx_t *wctx)
     return result;
 }
 
-static uint32_t _ui_get_available_space(ui_wctx_t *wctx, ui_layout_type_t layout_type)
+static uint32_t _ui_get_available_space(ui_wctx_t *wctx, bui_layout_type_t layout_type)
 {
-    ui_layout_t *current = ui_get_layout(wctx);
+    bui_layout_t *current = ui_get_layout(wctx);
     if (!current)
         return 0;
     if (layout_type == UI_LAYOUT_VERTICAL) {
@@ -595,9 +309,9 @@ static uint32_t _ui_get_available_space(ui_wctx_t *wctx, ui_layout_type_t layout
     return 0;
 }
 
-void ui_begin_column(ui_wctx_t *wctx, ui_rtlb_t margin)
+void ui_begin_column(ui_wctx_t *wctx, bui_rtlb_t margin)
 {
-    ui_layout_t *current = ui_get_layout(wctx);
+    bui_layout_t *current = ui_get_layout(wctx);
     if (!current)
         return;
     uint32_t available_width
@@ -607,9 +321,9 @@ void ui_begin_column(ui_wctx_t *wctx, ui_rtlb_t margin)
 
     ui_push_layout(
         wctx,
-        (ui_layout_t){
+        (bui_layout_t){
             .type = UI_LAYOUT_VERTICAL,
-            .size = (gfx_area_t){
+            .size = (bui_area_t){
                 .x = current->cursor_pos_x,
                 .y = current->cursor_pos_y,
                 .width = available_width + margin.l + margin.r,
@@ -627,16 +341,16 @@ void ui_begin_column(ui_wctx_t *wctx, ui_rtlb_t margin)
 
 void ui_end_column(ui_wctx_t *wctx)
 {
-    ui_layout_t column_layout = ui_pop_layout(wctx);
+    bui_layout_t column_layout = ui_pop_layout(wctx);
     ui_advance_layout(
         wctx,
         column_layout.size.width + column_layout.outer_margin.l + column_layout.outer_margin.r,
         column_layout.size.height + column_layout.outer_margin.t + column_layout.outer_margin.b);
 }
 
-void ui_begin_row(ui_wctx_t *wctx, ui_rtlb_t margin)
+void ui_begin_row(ui_wctx_t *wctx, bui_rtlb_t margin)
 {
-    ui_layout_t *current = ui_get_layout(wctx);
+    bui_layout_t *current = ui_get_layout(wctx);
     if (!current)
         return;
     uint32_t available_width
@@ -646,9 +360,9 @@ void ui_begin_row(ui_wctx_t *wctx, ui_rtlb_t margin)
 
     ui_push_layout(
         wctx,
-        (ui_layout_t){
+        (bui_layout_t){
             .type = UI_LAYOUT_HORIZONTAL,
-            .size = (gfx_area_t){
+            .size = (bui_area_t){
                 .x = current->cursor_pos_x,
                 .y = current->cursor_pos_y,
                 .width = available_width + margin.l + margin.r,
@@ -666,7 +380,7 @@ void ui_begin_row(ui_wctx_t *wctx, ui_rtlb_t margin)
 
 void ui_end_row(ui_wctx_t *wctx)
 {
-    ui_layout_t row_layout = ui_pop_layout(wctx);
+    bui_layout_t row_layout = ui_pop_layout(wctx);
     ui_advance_layout(
         wctx,
         row_layout.size.width + row_layout.outer_margin.l + row_layout.outer_margin.r,
@@ -674,9 +388,13 @@ void ui_end_row(ui_wctx_t *wctx)
 }
 
 void ui_begin_container(
-    ui_wctx_t *wctx, uint32_t width, uint32_t height, ui_rtlb_t outer_margin, ui_rtlb_t inner_margin)
+    ui_wctx_t *wctx,
+    uint32_t width,
+    uint32_t height,
+    bui_rtlb_t outer_margin,
+    bui_rtlb_t inner_margin)
 {
-    ui_layout_t *current = ui_get_layout(wctx);
+    bui_layout_t *current = ui_get_layout(wctx);
     if (!current)
         return;
     uint32_t available_width = _sub_or_zero(
@@ -695,9 +413,9 @@ void ui_begin_container(
 
     ui_push_layout(
         wctx,
-        (ui_layout_t){
+        (bui_layout_t){
             .type = UI_LAYOUT_VERTICAL,
-            .size = (gfx_area_t){
+            .size = (bui_area_t){
                 .x = current->cursor_pos_x + outer_margin.l,
                 .y = current->cursor_pos_y + outer_margin.t,
                 .width = layout_width,
@@ -716,12 +434,12 @@ void ui_begin_container(
 
 void ui_end_container(ui_wctx_t *wctx)
 {
-    ui_layout_t container_layout = ui_pop_layout(wctx);
-    gfx_area_t size = container_layout.size;
+    bui_layout_t container_layout = ui_pop_layout(wctx);
+    bui_area_t size = container_layout.size;
 
-    gfx_draw_rect(
-        &wctx->framebuffer,
-        (gfx_rect_t){
+    bui_draw_rect(
+        wctx,
+        (bui_rect_t){
             .x = size.x,
             .y = size.y,
             .width = size.width,
@@ -731,9 +449,9 @@ void ui_end_container(ui_wctx_t *wctx)
         });
 
     if (size.width > BORDER_THICKNESS * 2 && size.height > BORDER_THICKNESS * 2) {
-        gfx_draw_rect(
-            &wctx->framebuffer,
-            (gfx_rect_t){
+        bui_draw_rect(
+            wctx,
+            (bui_rect_t){
                 .x = size.x + BORDER_THICKNESS,
                 .y = size.y + BORDER_THICKNESS,
                 .width = size.width - BORDER_THICKNESS * 2,
@@ -759,67 +477,68 @@ static bool _ui_has_visible_space(ui_wctx_t *wctx)
 
 void ui_label(ui_wctx_t *wctx, const char *label)
 {
-    ui_layout_t *layout = ui_get_layout(wctx);
+    bui_layout_t *layout = ui_get_layout(wctx);
     if (!layout)
         return;
-    gfx_area_t text_area = gfx_get_text_area(&_default_font, label);
+    bui_area_t text_area = bui_get_text_area(&_default_font, label);
 
     if (!_ui_has_visible_space(wctx))
         return;
 
-    gfx_set_clip(
-        &wctx->framebuffer,
-        (gfx_area_t){
+    bui_set_clip(
+        wctx,
+        (bui_area_t){
             .x = layout->cursor_pos_x,
             .y = layout->cursor_pos_y,
             .width = _ui_get_available_space(wctx, UI_LAYOUT_HORIZONTAL),
             .height = _ui_get_available_space(wctx, UI_LAYOUT_VERTICAL),
         });
-    gfx_draw_text(
-        &wctx->framebuffer,
+    bui_draw_text(
+        wctx,
         &_default_font,
-        (gfx_pos_t){layout->cursor_pos_x + text_area.x, layout->cursor_pos_y + text_area.y},
+        (bui_pos_t){layout->cursor_pos_x + text_area.x, layout->cursor_pos_y + text_area.y},
         TEXT_COLOR,
         label);
-    gfx_reset_clip(&wctx->framebuffer);
+    bui_reset_clip(wctx);
 
     ui_advance_layout(wctx, text_area.width, text_area.height);
 }
 
-bool ui_is_mouse_in_area(ui_wctx_t *wctx, gfx_area_t area)
+bool ui_is_mouse_in_area(ui_wctx_t *wctx, bui_area_t area)
 {
     return wctx->mouse_state.pos_x >= area.x && wctx->mouse_state.pos_x < area.x + area.width
            && wctx->mouse_state.pos_y >= area.y && wctx->mouse_state.pos_y < area.y + area.height;
 }
 
-gfx_pos_t ui_get_mouse_pos(ui_wctx_t *wctx)
+bui_pos_t ui_get_mouse_pos(ui_wctx_t *wctx)
 {
-    return (gfx_pos_t){wctx->mouse_state.pos_x, wctx->mouse_state.pos_y};
+    return (bui_pos_t){wctx->mouse_state.pos_x, wctx->mouse_state.pos_y};
 }
 
-bool ui_is_mouse_button_down(ui_wctx_t *wctx, input_mouse_button_t button)
+bool ui_is_mouse_button_down(ui_wctx_t *wctx, bui_mouse_button_t button)
 {
     return (wctx->mouse_state.buttons_state & button) != 0;
 }
 
-bool ui_is_key_down(ui_wctx_t *wctx, input_keyboard_scancode_t keycode)
+bool ui_is_key_down(ui_wctx_t *wctx, bui_keyboard_scancode_t keycode)
 {
-    return wctx->keyboard_keys[keycode] == INPUT_KEYACTION_DOWN
-           || wctx->keyboard_keys[keycode] == INPUT_KEYACTION_HOLD;
+    return wctx && keycode < 256
+           && (wctx->keyboard_keys[keycode] == BUI_KEY_STATE_DOWN
+               || wctx->keyboard_keys[keycode] == BUI_KEY_STATE_HOLD);
 }
 
-bool ui_is_key_up(ui_wctx_t *wctx, input_keyboard_scancode_t keycode)
+bool ui_is_key_up(ui_wctx_t *wctx, bui_keyboard_scancode_t keycode)
 {
-    return wctx->keyboard_keys[keycode] == INPUT_KEYACTION_UP;
+    return !wctx || keycode >= 256 || wctx->keyboard_keys[keycode] == BUI_KEY_STATE_UP;
 }
 
 bool ui_button(ui_wctx_t *wctx, const char *label)
 {
-    ui_layout_t *layout = ui_get_layout(wctx);
+    bui_layout_t *layout = ui_get_layout(wctx);
     if (!layout)
         return false;
-    gfx_area_t text_area = gfx_get_text_area(&_default_font, label);
-    gfx_area_t button_area = {
+    bui_area_t text_area = bui_get_text_area(&_default_font, label);
+    bui_area_t button_area = {
         .x = layout->cursor_pos_x,
         .y = layout->cursor_pos_y,
         .width = text_area.width + DEFAULT_PADDING * 2,
@@ -829,17 +548,17 @@ bool ui_button(ui_wctx_t *wctx, const char *label)
     if (!_ui_has_visible_space(wctx))
         return false;
 
-    gfx_set_clip(
-        &wctx->framebuffer,
-        (gfx_area_t){
+    bui_set_clip(
+        wctx,
+        (bui_area_t){
             .x = layout->cursor_pos_x,
             .y = layout->cursor_pos_y,
             .width = _ui_get_available_space(wctx, UI_LAYOUT_HORIZONTAL),
             .height = _ui_get_available_space(wctx, UI_LAYOUT_VERTICAL),
         });
-    gfx_draw_filled_rect(
-        &wctx->framebuffer,
-        (gfx_rect_t){
+    bui_draw_filled_rect(
+        wctx,
+        (bui_rect_t){
             .x = button_area.x,
             .y = button_area.y,
             .width = button_area.width,
@@ -849,9 +568,9 @@ bool ui_button(ui_wctx_t *wctx, const char *label)
         },
         SECONDARY_BACKGROUND_COLOR);
     if (button_area.width > BORDER_THICKNESS * 2 && button_area.height > BORDER_THICKNESS * 2) {
-        gfx_draw_rect(
-            &wctx->framebuffer,
-            (gfx_rect_t){
+        bui_draw_rect(
+            wctx,
+            (bui_rect_t){
                 .x = button_area.x + BORDER_THICKNESS,
                 .y = button_area.y + BORDER_THICKNESS,
                 .width = button_area.width - BORDER_THICKNESS * 2,
@@ -860,22 +579,22 @@ bool ui_button(ui_wctx_t *wctx, const char *label)
                 .border_thickness = BORDER_THICKNESS,
             });
     }
-    gfx_draw_text(
-        &wctx->framebuffer,
+    bui_draw_text(
+        wctx,
         &_default_font,
-        (gfx_pos_t){
+        (bui_pos_t){
             .x = button_area.x + text_area.x + DEFAULT_PADDING,
             .y = button_area.y + text_area.y + DEFAULT_PADDING,
         },
         TEXT_COLOR,
         label);
-    gfx_reset_clip(&wctx->framebuffer);
+    bui_reset_clip(wctx);
 
     ui_advance_layout(wctx, button_area.width, button_area.height);
 
-    return ui_is_mouse_in_area(wctx, button_area)
-           && ui_is_mouse_button_down(wctx, INPUT_MOUSE_BUTTON_LEFT)
-           && wctx->last_event.type == INPUT_EVENT_MOUSE;
+    return wctx->last_event.type == BUI_EVENT_MOUSE_BUTTON_DOWN
+           && wctx->last_event.mouse_button.button == BUI_MOUSE_BUTTON_LEFT
+           && ui_is_mouse_in_area(wctx, button_area);
 }
 
 ui_textbox_state_t ui_new_textbox_state(char *buffer, size_t buffer_size)
@@ -894,32 +613,166 @@ static void _ui_textbox_append(ui_textbox_state_t *state, const char *text)
     strncat(state->buffer, text, remaining);
 }
 
+static char _ui_textbox_char_from_key(ui_wctx_t *wctx, bui_keyboard_scancode_t key)
+{
+    if (ui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_LCTRL)
+        || ui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_LALT))
+        return '\0';
+
+    bool shifted = ui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_LSHIFT)
+                   || ui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_RSHIFT);
+
+    char ch = '\0';
+    switch (key) {
+    case BUI_KEYBOARD_SCANCODE_A:
+        ch = 'a';
+        break;
+    case BUI_KEYBOARD_SCANCODE_B:
+        ch = 'b';
+        break;
+    case BUI_KEYBOARD_SCANCODE_C:
+        ch = 'c';
+        break;
+    case BUI_KEYBOARD_SCANCODE_D:
+        ch = 'd';
+        break;
+    case BUI_KEYBOARD_SCANCODE_E:
+        ch = 'e';
+        break;
+    case BUI_KEYBOARD_SCANCODE_F:
+        ch = 'f';
+        break;
+    case BUI_KEYBOARD_SCANCODE_G:
+        ch = 'g';
+        break;
+    case BUI_KEYBOARD_SCANCODE_H:
+        ch = 'h';
+        break;
+    case BUI_KEYBOARD_SCANCODE_I:
+        ch = 'i';
+        break;
+    case BUI_KEYBOARD_SCANCODE_J:
+        ch = 'j';
+        break;
+    case BUI_KEYBOARD_SCANCODE_K:
+        ch = 'k';
+        break;
+    case BUI_KEYBOARD_SCANCODE_L:
+        ch = 'l';
+        break;
+    case BUI_KEYBOARD_SCANCODE_M:
+        ch = 'm';
+        break;
+    case BUI_KEYBOARD_SCANCODE_N:
+        ch = 'n';
+        break;
+    case BUI_KEYBOARD_SCANCODE_O:
+        ch = 'o';
+        break;
+    case BUI_KEYBOARD_SCANCODE_P:
+        ch = 'p';
+        break;
+    case BUI_KEYBOARD_SCANCODE_Q:
+        ch = 'q';
+        break;
+    case BUI_KEYBOARD_SCANCODE_R:
+        ch = 'r';
+        break;
+    case BUI_KEYBOARD_SCANCODE_S:
+        ch = 's';
+        break;
+    case BUI_KEYBOARD_SCANCODE_T:
+        ch = 't';
+        break;
+    case BUI_KEYBOARD_SCANCODE_U:
+        ch = 'u';
+        break;
+    case BUI_KEYBOARD_SCANCODE_V:
+        ch = 'v';
+        break;
+    case BUI_KEYBOARD_SCANCODE_W:
+        ch = 'w';
+        break;
+    case BUI_KEYBOARD_SCANCODE_X:
+        ch = 'x';
+        break;
+    case BUI_KEYBOARD_SCANCODE_Y:
+        ch = 'y';
+        break;
+    case BUI_KEYBOARD_SCANCODE_Z:
+        ch = 'z';
+        break;
+    default:
+        break;
+    }
+    if (ch != '\0')
+        return shifted ? (char) (ch - 'a' + 'A') : ch;
+
+    if (key >= BUI_KEYBOARD_SCANCODE_1 && key <= BUI_KEYBOARD_SCANCODE_9) {
+        static const char normal[] = "123456789";
+        static const char shifted_digits[] = "!@#$%^&*(";
+        size_t index = (size_t) (key - BUI_KEYBOARD_SCANCODE_1);
+        return shifted ? shifted_digits[index] : normal[index];
+    }
+
+    switch (key) {
+    case BUI_KEYBOARD_SCANCODE_0:
+        return shifted ? ')' : '0';
+    case BUI_KEYBOARD_SCANCODE_SPACE:
+        return ' ';
+    case BUI_KEYBOARD_SCANCODE_MINUS:
+        return shifted ? '_' : '-';
+    case BUI_KEYBOARD_SCANCODE_EQUALS:
+        return shifted ? '+' : '=';
+    case BUI_KEYBOARD_SCANCODE_LBRACKET:
+        return shifted ? '{' : '[';
+    case BUI_KEYBOARD_SCANCODE_RBRACKET:
+        return shifted ? '}' : ']';
+    case BUI_KEYBOARD_SCANCODE_BACKSLASH:
+        return shifted ? '|' : '\\';
+    case BUI_KEYBOARD_SCANCODE_SEMICOLON:
+        return shifted ? ':' : ';';
+    case BUI_KEYBOARD_SCANCODE_APOSTROPHE:
+        return shifted ? '"' : '\'';
+    case BUI_KEYBOARD_SCANCODE_BACKTICK:
+        return shifted ? '~' : '`';
+    case BUI_KEYBOARD_SCANCODE_COMMA:
+        return shifted ? '<' : ',';
+    case BUI_KEYBOARD_SCANCODE_PERIOD:
+        return shifted ? '>' : '.';
+    case BUI_KEYBOARD_SCANCODE_SLASH:
+        return shifted ? '?' : '/';
+    default:
+        return '\0';
+    }
+}
+
 void ui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state)
 {
-    ui_layout_t *layout = ui_get_layout(wctx);
+    bui_layout_t *layout = ui_get_layout(wctx);
     if (!layout || !state)
         return;
-    gfx_area_t textbox_area = {
+    bui_area_t textbox_area = {
         .x = layout->cursor_pos_x,
         .y = layout->cursor_pos_y,
         .width = _ui_get_available_space(wctx, UI_LAYOUT_HORIZONTAL),
-        .height = 12 + DEFAULT_PADDING * 2,
+        .height = 13 + DEFAULT_PADDING * 2,
     };
 
     if (!_ui_has_visible_space(wctx))
         return;
 
-    gfx_set_clip(
-        &wctx->framebuffer,
-        (gfx_area_t){
+    bui_set_clip(
+        wctx,
+        (bui_area_t){
             .x = layout->cursor_pos_x,
             .y = layout->cursor_pos_y,
             .width = _ui_get_available_space(wctx, UI_LAYOUT_HORIZONTAL),
             .height = _ui_get_available_space(wctx, UI_LAYOUT_VERTICAL),
         });
-    gfx_draw_filled_rect(
-        &wctx->framebuffer,
-        (gfx_rect_t){
+    bui_draw_filled_rect(
+        wctx,
+        (bui_rect_t){
             .x = textbox_area.x,
             .y = textbox_area.y,
             .width = textbox_area.width,
@@ -929,9 +782,9 @@ void ui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state)
         },
         SECONDARY_BACKGROUND_COLOR);
     if (textbox_area.width > BORDER_THICKNESS * 2 && textbox_area.height > BORDER_THICKNESS * 2) {
-        gfx_draw_rect(
-            &wctx->framebuffer,
-            (gfx_rect_t){
+        bui_draw_rect(
+            wctx,
+            (bui_rect_t){
                 .x = textbox_area.x + BORDER_THICKNESS,
                 .y = textbox_area.y + BORDER_THICKNESS,
                 .width = textbox_area.width - BORDER_THICKNESS * 2,
@@ -941,34 +794,34 @@ void ui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state)
             });
     }
 
-    if (!state->focused && wctx->last_event.type == INPUT_EVENT_MOUSE
-        && ui_is_mouse_button_down(wctx, INPUT_MOUSE_BUTTON_LEFT)
-        && ui_is_mouse_in_area(wctx, textbox_area))
-        state->focused = true;
+    if (wctx->last_event.type == BUI_EVENT_MOUSE_BUTTON_DOWN
+        && wctx->last_event.mouse_button.button == BUI_MOUSE_BUTTON_LEFT)
+        state->focused = ui_is_mouse_in_area(wctx, textbox_area);
 
-    if (state->focused && wctx->last_event.type == INPUT_EVENT_MOUSE
-        && ui_is_mouse_button_down(wctx, INPUT_MOUSE_BUTTON_LEFT)
-        && !ui_is_mouse_in_area(wctx, textbox_area))
-        state->focused = false;
-
-    if (state->focused) {
-        if (wctx->last_event.type == INPUT_EVENT_TEXT)
-            _ui_textbox_append(state, wctx->last_event.data.text);
-        else if (
-            wctx->last_event.type == INPUT_EVENT_KEYBOARD
-            && wctx->last_event.data.keyboard.action == INPUT_KEYACTION_DOWN
-            && wctx->last_event.data.keyboard.scancode == INPUT_KEYBOARD_SCANCODE_BACKSPACE
-            && state->buffer && state->buffer[0] != '\0')
-            state->buffer[strlen(state->buffer) - 1] = '\0';
+    if (state->focused
+        && (wctx->last_event.type == BUI_EVENT_KEY_DOWN
+            || wctx->last_event.type == BUI_EVENT_KEY_HOLD)) {
+        char text[2] = {_ui_textbox_char_from_key(wctx, wctx->last_event.keyboard), '\0'};
+        if (text[0] != '\0')
+            _ui_textbox_append(state, text);
     }
 
+    if (state->focused
+        && (wctx->last_event.type == BUI_EVENT_KEY_DOWN
+            || wctx->last_event.type == BUI_EVENT_KEY_HOLD)
+        && wctx->last_event.keyboard == BUI_KEYBOARD_SCANCODE_BACKSPACE && state->buffer
+        && state->buffer[0] != '\0')
+        state->buffer[strlen(state->buffer) - 1] = '\0';
+
     if (state->buffer && state->buffer[0] != '\0') {
-        gfx_area_t text_area = gfx_get_text_area(&_default_font, state->buffer);
-        gfx_draw_text(
-            &wctx->framebuffer,
+        bui_area_t text_area = bui_get_text_area(&_default_font, state->buffer);
+        bui_draw_text(
+            wctx,
             &_default_font,
-            (gfx_pos_t){
-                textbox_area.x + 5 + text_area.x, textbox_area.y + DEFAULT_PADDING + text_area.y},
+            (bui_pos_t){
+                .x = textbox_area.x + 5 + text_area.x,
+                .y = textbox_area.y + DEFAULT_PADDING + text_area.y,
+            },
             TEXT_COLOR,
             state->buffer);
     }
@@ -976,10 +829,10 @@ void ui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state)
     if (state->focused) {
         uint32_t caret_x = textbox_area.x + 5;
         if (state->buffer)
-            caret_x += gfx_get_text_width(&_default_font, state->buffer);
-        gfx_draw_line(
-            &wctx->framebuffer,
-            (gfx_line_t){
+            caret_x += bui_get_text_width(&_default_font, state->buffer);
+        bui_draw_line(
+            wctx,
+            (bui_line_t){
                 .x1 = caret_x,
                 .y1 = textbox_area.y + 4,
                 .x2 = caret_x,
@@ -988,7 +841,7 @@ void ui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state)
             },
             TEXT_COLOR);
     }
-    gfx_reset_clip(&wctx->framebuffer);
+    bui_reset_clip(wctx);
 
     ui_advance_layout(wctx, textbox_area.width, textbox_area.height);
 }
