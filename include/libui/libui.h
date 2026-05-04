@@ -15,6 +15,21 @@
 extern "C" {
 #endif
 
+#define BUI_COLUMN(window, padding, body) \
+    bui_begin_column(window, (padding)); \
+    {body}; \
+    bui_end_column(window)
+
+#define BUI_ROW(window, padding, body) \
+    bui_begin_row(window, (padding)); \
+    {body}; \
+    bui_end_row(window)
+
+#define BUI_CONTAINER(window, width, height, outer_margin, inner_margin, body) \
+    bui_begin_container(window, width, height, outer_margin, inner_margin); \
+    body; \
+    bui_end_container(window)
+
 typedef enum {
     UI_WINDOW_STATE_ERROR = -1,
     UI_WINDOW_STATE_PENDING = 0,
@@ -33,8 +48,8 @@ typedef struct
 } bui_rtlb_t;
 
 typedef enum {
-    UI_LAYOUT_VERTICAL,
-    UI_LAYOUT_HORIZONTAL,
+    BUI_LAYOUT_VERTICAL,
+    BUI_LAYOUT_HORIZONTAL,
 } bui_layout_type_t;
 
 typedef struct
@@ -141,51 +156,55 @@ typedef struct
     bool running;
 } ui_ctx_t;
 
-bool ui_init_context(ui_ctx_t *ctx);
-void ui_deinit_context(ui_ctx_t *ctx);
-bool ui_pump_events(ui_ctx_t *ctx);
+bool bui_init_context(ui_ctx_t *ctx);
+void bui_deinit_context(ui_ctx_t *ctx);
+bool bui_pump_events(ui_ctx_t *ctx);
 
-bool ui_is_mouse_button_down(ui_wctx_t *wctx, bui_mouse_button_t button);
-bui_pos_t ui_get_mouse_pos(ui_wctx_t *wctx);
-bool ui_is_mouse_in_area(ui_wctx_t *wctx, bui_area_t area);
+bool bui_is_mouse_button_down(ui_wctx_t *wctx, bui_mouse_button_t button);
+bui_pos_t bui_get_mouse_pos(ui_wctx_t *wctx);
+bool bui_is_mouse_in_area(ui_wctx_t *wctx, bui_area_t area);
 
-bool ui_is_key_down(ui_wctx_t *wctx, bui_keyboard_scancode_t keycode);
-bool ui_is_key_up(ui_wctx_t *wctx, bui_keyboard_scancode_t keycode);
+bool bui_is_key_down(ui_wctx_t *wctx, bui_keyboard_scancode_t keycode);
+bool bui_is_key_up(ui_wctx_t *wctx, bui_keyboard_scancode_t keycode);
+char bui_char_from_key_scancode(ui_wctx_t *wctx, bui_keyboard_scancode_t key);
 
-ui_wctx_t *ui_new_window(ui_ctx_t *, const char *title, int width, int height, window_flags_t);
-void ui_destroy_window(ui_ctx_t *, ui_wctx_t *);
+ui_wctx_t *bui_new_window(ui_ctx_t *, const char *title, int width, int height, window_flags_t);
+void bui_destroy_window(ui_ctx_t *, ui_wctx_t *);
 
-bool ui_begin_window(ui_wctx_t *wctx);
-bool ui_end_window(ui_wctx_t *wctx);
+bool bui_begin_window(ui_wctx_t *wctx);
+bool bui_end_window(ui_wctx_t *wctx);
 
-bool ui_push_layout(ui_wctx_t *wctx, bui_layout_t layout);
-bui_layout_t *ui_get_layout(ui_wctx_t *wctx);
-void ui_advance_layout(ui_wctx_t *wctx, uint32_t w, uint32_t h);
-bui_layout_t ui_pop_layout(ui_wctx_t *wctx);
+bool bui_push_layout(ui_wctx_t *wctx, bui_layout_t layout);
+bui_layout_t *bui_get_layout(ui_wctx_t *wctx);
+void bui_advance_layout(ui_wctx_t *wctx, uint32_t w, uint32_t h);
+bui_layout_t bui_pop_layout(ui_wctx_t *wctx);
+uint32_t bui_get_available_space(ui_wctx_t *wctx, bui_layout_type_t layout_type);
 
-void ui_begin_column(ui_wctx_t *wctx, bui_rtlb_t margin);
-void ui_end_column(ui_wctx_t *wctx);
-void ui_begin_row(ui_wctx_t *wctx, bui_rtlb_t margin);
-void ui_end_row(ui_wctx_t *wctx);
-void ui_begin_container(
+void bui_begin_column(ui_wctx_t *wctx, bui_rtlb_t margin);
+void bui_end_column(ui_wctx_t *wctx);
+void bui_begin_row(ui_wctx_t *wctx, bui_rtlb_t margin);
+void bui_end_row(ui_wctx_t *wctx);
+void bui_begin_container(
     ui_wctx_t *wctx,
     uint32_t width,
     uint32_t height,
     bui_rtlb_t outer_margin,
     bui_rtlb_t inner_margin);
-void ui_end_container(ui_wctx_t *wctx);
+void bui_end_container(ui_wctx_t *wctx);
 
-void ui_label(ui_wctx_t *wctx, const char *label);
-bool ui_button(ui_wctx_t *wctx, const char *label);
+void bui_label(ui_wctx_t *wctx, const char *label);
+bool bui_button(ui_wctx_t *wctx, const char *label);
 
 typedef struct
 {
     char *buffer;
-    size_t buffer_size;
+    size_t size;
+    size_t cursor;
     bool focused;
 } ui_textbox_state_t;
-ui_textbox_state_t ui_new_textbox_state(char *buffer, size_t buffer_size);
-void ui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state);
+ui_textbox_state_t bui_new_textbox_state(char *buffer, size_t buffer_size);
+void bui_reset_textbox(ui_textbox_state_t *state);
+bool bui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state, uint32_t width);
 
 #ifdef __cplusplus
 }

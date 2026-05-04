@@ -54,24 +54,24 @@ static void _ui_clear_transient_events(ui_ctx_t *ctx)
         wctx->last_event = (bui_event_t){0};
 }
 
-bool ui_init_context(ui_ctx_t *ctx)
+bool bui_init_context(ui_ctx_t *ctx)
 {
     memset(ctx, 0, sizeof(ui_ctx_t));
     ctx->running = true;
     return true;
 }
 
-void ui_deinit_context(ui_ctx_t *ctx)
+void bui_deinit_context(ui_ctx_t *ctx)
 {
     ui_wctx_t *current = ctx->first_window;
     while (current) {
         ui_wctx_t *next = current->next;
-        ui_destroy_window(ctx, current);
+        bui_destroy_window(ctx, current);
         current = next;
     }
 }
 
-ui_wctx_t *ui_new_window(ui_ctx_t *ctx, const char *title, int w, int h, window_flags_t flags)
+ui_wctx_t *bui_new_window(ui_ctx_t *ctx, const char *title, int w, int h, window_flags_t flags)
 {
     ui_wctx_t *wctx = calloc(1, sizeof(ui_wctx_t));
     if (!wctx)
@@ -97,10 +97,6 @@ ui_wctx_t *ui_new_window(ui_ctx_t *ctx, const char *title, int w, int h, window_
     wctx->layout_count = 0;
     wctx->layout_capacity = INITIAL_STACK_CAPACITY;
 
-    // for (size_t i = 0; i < 256; i++)
-    //     wctx->keyboard_keys[i] = BUI_INPUT_KEYACTION_UP;
-    // wctx->mouse_state = (ui_mouse_state_t){0};
-
     wctx->next = ctx->first_window;
     if (ctx->first_window)
         ctx->first_window->prev = wctx;
@@ -109,7 +105,7 @@ ui_wctx_t *ui_new_window(ui_ctx_t *ctx, const char *title, int w, int h, window_
     return wctx;
 }
 
-void ui_destroy_window(ui_ctx_t *ctx, ui_wctx_t *wctx)
+void bui_destroy_window(ui_ctx_t *ctx, ui_wctx_t *wctx)
 {
     if (!wctx)
         return;
@@ -125,7 +121,7 @@ void ui_destroy_window(ui_ctx_t *ctx, ui_wctx_t *wctx)
     free(wctx);
 }
 
-bool ui_pump_events(ui_ctx_t *ctx)
+bool bui_pump_events(ui_ctx_t *ctx)
 {
     if (!ctx || !ctx->running || ctx->first_window == NULL)
         return false;
@@ -196,7 +192,7 @@ bool ui_pump_events(ui_ctx_t *ctx)
     return true;
 }
 
-bool ui_begin_window(ui_wctx_t *wctx)
+bool bui_begin_window(ui_wctx_t *wctx)
 {
     if (!wctx || wctx->state != UI_WINDOW_STATE_ACTIVE)
         return false;
@@ -208,10 +204,10 @@ bool ui_begin_window(ui_wctx_t *wctx)
         wctx,
         (bui_rect_t){.x = 0, .y = 0, .width = wctx->width, .height = wctx->height},
         BACKGROUND_COLOR);
-    ui_push_layout(
+    bui_push_layout(
         wctx,
         (bui_layout_t){
-            .type = UI_LAYOUT_VERTICAL,
+            .type = BUI_LAYOUT_VERTICAL,
             .size = (bui_area_t){0, 0, wctx->width, wctx->height},
             .cursor_pos_x = 0,
             .cursor_pos_y = 0,
@@ -223,7 +219,7 @@ bool ui_begin_window(ui_wctx_t *wctx)
     return true;
 }
 
-bool ui_end_window(ui_wctx_t *wctx)
+bool bui_end_window(ui_wctx_t *wctx)
 {
     if (!wctx || wctx->state != UI_WINDOW_STATE_ACTIVE)
         return false;
@@ -231,7 +227,7 @@ bool ui_end_window(ui_wctx_t *wctx)
     return true;
 }
 
-bool ui_push_layout(ui_wctx_t *wctx, bui_layout_t layout)
+bool bui_push_layout(ui_wctx_t *wctx, bui_layout_t layout)
 {
     if (wctx->layout_count >= wctx->layout_capacity) {
         size_t new_capacity = wctx->layout_capacity * 2;
@@ -245,19 +241,19 @@ bool ui_push_layout(ui_wctx_t *wctx, bui_layout_t layout)
     return true;
 }
 
-bui_layout_t *ui_get_layout(ui_wctx_t *wctx)
+bui_layout_t *bui_get_layout(ui_wctx_t *wctx)
 {
     if (!wctx || wctx->layout_count == 0)
         return NULL;
     return &wctx->layout_stack[wctx->layout_count - 1];
 }
 
-void ui_advance_layout(ui_wctx_t *wctx, uint32_t w, uint32_t h)
+void bui_advance_layout(ui_wctx_t *wctx, uint32_t w, uint32_t h)
 {
-    bui_layout_t *current = ui_get_layout(wctx);
+    bui_layout_t *current = bui_get_layout(wctx);
     if (!current)
         return;
-    if (current->type == UI_LAYOUT_HORIZONTAL) {
+    if (current->type == BUI_LAYOUT_HORIZONTAL) {
         uint32_t item_right
             = _sub_or_zero(current->cursor_pos_x, current->size.x + current->inner_margin.l) + w;
         if (item_right > current->content_width)
@@ -265,7 +261,7 @@ void ui_advance_layout(ui_wctx_t *wctx, uint32_t w, uint32_t h)
         if (h > current->content_height)
             current->content_height = h;
         current->cursor_pos_x += w + current->padding_x;
-    } else if (current->type == UI_LAYOUT_VERTICAL) {
+    } else if (current->type == BUI_LAYOUT_VERTICAL) {
         uint32_t item_bottom
             = _sub_or_zero(current->cursor_pos_y, current->size.y + current->inner_margin.t) + h;
         if (w > current->content_width)
@@ -276,7 +272,7 @@ void ui_advance_layout(ui_wctx_t *wctx, uint32_t w, uint32_t h)
     }
 }
 
-bui_layout_t ui_pop_layout(ui_wctx_t *wctx)
+bui_layout_t bui_pop_layout(ui_wctx_t *wctx)
 {
     if (!wctx || wctx->layout_count == 0)
         return (bui_layout_t){0};
@@ -288,18 +284,18 @@ bui_layout_t ui_pop_layout(ui_wctx_t *wctx)
     return result;
 }
 
-static uint32_t _ui_get_available_space(ui_wctx_t *wctx, bui_layout_type_t layout_type)
+uint32_t bui_get_available_space(ui_wctx_t *wctx, bui_layout_type_t layout_type)
 {
-    bui_layout_t *current = ui_get_layout(wctx);
+    bui_layout_t *current = bui_get_layout(wctx);
     if (!current)
         return 0;
-    if (layout_type == UI_LAYOUT_VERTICAL) {
+    if (layout_type == BUI_LAYOUT_VERTICAL) {
         uint32_t height
             = _sub_or_zero(current->size.height, current->inner_margin.t + current->inner_margin.b);
         uint32_t used
             = _sub_or_zero(current->cursor_pos_y, current->size.y + current->inner_margin.t);
         return _sub_or_zero(height, used);
-    } else if (layout_type == UI_LAYOUT_HORIZONTAL) {
+    } else if (layout_type == BUI_LAYOUT_HORIZONTAL) {
         uint32_t width
             = _sub_or_zero(current->size.width, current->inner_margin.l + current->inner_margin.r);
         uint32_t used
@@ -309,20 +305,20 @@ static uint32_t _ui_get_available_space(ui_wctx_t *wctx, bui_layout_type_t layou
     return 0;
 }
 
-void ui_begin_column(ui_wctx_t *wctx, bui_rtlb_t margin)
+void bui_begin_column(ui_wctx_t *wctx, bui_rtlb_t margin)
 {
-    bui_layout_t *current = ui_get_layout(wctx);
+    bui_layout_t *current = bui_get_layout(wctx);
     if (!current)
         return;
     uint32_t available_width
-        = _sub_or_zero(_ui_get_available_space(wctx, UI_LAYOUT_HORIZONTAL), margin.l + margin.r);
+        = _sub_or_zero(bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL), margin.l + margin.r);
     uint32_t available_height
-        = _sub_or_zero(_ui_get_available_space(wctx, UI_LAYOUT_VERTICAL), margin.t + margin.b);
+        = _sub_or_zero(bui_get_available_space(wctx, BUI_LAYOUT_VERTICAL), margin.t + margin.b);
 
-    ui_push_layout(
+    bui_push_layout(
         wctx,
         (bui_layout_t){
-            .type = UI_LAYOUT_VERTICAL,
+            .type = BUI_LAYOUT_VERTICAL,
             .size = (bui_area_t){
                 .x = current->cursor_pos_x,
                 .y = current->cursor_pos_y,
@@ -339,29 +335,29 @@ void ui_begin_column(ui_wctx_t *wctx, bui_rtlb_t margin)
         });
 }
 
-void ui_end_column(ui_wctx_t *wctx)
+void bui_end_column(ui_wctx_t *wctx)
 {
-    bui_layout_t column_layout = ui_pop_layout(wctx);
-    ui_advance_layout(
+    bui_layout_t column_layout = bui_pop_layout(wctx);
+    bui_advance_layout(
         wctx,
         column_layout.size.width + column_layout.outer_margin.l + column_layout.outer_margin.r,
         column_layout.size.height + column_layout.outer_margin.t + column_layout.outer_margin.b);
 }
 
-void ui_begin_row(ui_wctx_t *wctx, bui_rtlb_t margin)
+void bui_begin_row(ui_wctx_t *wctx, bui_rtlb_t margin)
 {
-    bui_layout_t *current = ui_get_layout(wctx);
+    bui_layout_t *current = bui_get_layout(wctx);
     if (!current)
         return;
     uint32_t available_width
-        = _sub_or_zero(_ui_get_available_space(wctx, UI_LAYOUT_HORIZONTAL), margin.l + margin.r);
+        = _sub_or_zero(bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL), margin.l + margin.r);
     uint32_t available_height
-        = _sub_or_zero(_ui_get_available_space(wctx, UI_LAYOUT_VERTICAL), margin.t + margin.b);
+        = _sub_or_zero(bui_get_available_space(wctx, BUI_LAYOUT_VERTICAL), margin.t + margin.b);
 
-    ui_push_layout(
+    bui_push_layout(
         wctx,
         (bui_layout_t){
-            .type = UI_LAYOUT_HORIZONTAL,
+            .type = BUI_LAYOUT_HORIZONTAL,
             .size = (bui_area_t){
                 .x = current->cursor_pos_x,
                 .y = current->cursor_pos_y,
@@ -378,29 +374,29 @@ void ui_begin_row(ui_wctx_t *wctx, bui_rtlb_t margin)
         });
 }
 
-void ui_end_row(ui_wctx_t *wctx)
+void bui_end_row(ui_wctx_t *wctx)
 {
-    bui_layout_t row_layout = ui_pop_layout(wctx);
-    ui_advance_layout(
+    bui_layout_t row_layout = bui_pop_layout(wctx);
+    bui_advance_layout(
         wctx,
         row_layout.size.width + row_layout.outer_margin.l + row_layout.outer_margin.r,
         row_layout.size.height + row_layout.outer_margin.t + row_layout.outer_margin.b);
 }
 
-void ui_begin_container(
+void bui_begin_container(
     ui_wctx_t *wctx,
     uint32_t width,
     uint32_t height,
     bui_rtlb_t outer_margin,
     bui_rtlb_t inner_margin)
 {
-    bui_layout_t *current = ui_get_layout(wctx);
+    bui_layout_t *current = bui_get_layout(wctx);
     if (!current)
         return;
     uint32_t available_width = _sub_or_zero(
-        _ui_get_available_space(wctx, UI_LAYOUT_HORIZONTAL), outer_margin.l + outer_margin.r);
+        bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL), outer_margin.l + outer_margin.r);
     uint32_t available_height = _sub_or_zero(
-        _ui_get_available_space(wctx, UI_LAYOUT_VERTICAL), outer_margin.t + outer_margin.b);
+        bui_get_available_space(wctx, BUI_LAYOUT_VERTICAL), outer_margin.t + outer_margin.b);
     uint32_t layout_width = width == UINT32_MAX ? available_width : width;
     uint32_t layout_height = height == UINT32_MAX ? available_height : height;
     bool fit_width = width == 0;
@@ -411,10 +407,10 @@ void ui_begin_container(
     if (fit_height || layout_height > available_height)
         layout_height = available_height;
 
-    ui_push_layout(
+    bui_push_layout(
         wctx,
         (bui_layout_t){
-            .type = UI_LAYOUT_VERTICAL,
+            .type = BUI_LAYOUT_VERTICAL,
             .size = (bui_area_t){
                 .x = current->cursor_pos_x + outer_margin.l,
                 .y = current->cursor_pos_y + outer_margin.t,
@@ -432,9 +428,9 @@ void ui_begin_container(
         });
 }
 
-void ui_end_container(ui_wctx_t *wctx)
+void bui_end_container(ui_wctx_t *wctx)
 {
-    bui_layout_t container_layout = ui_pop_layout(wctx);
+    bui_layout_t container_layout = bui_pop_layout(wctx);
     bui_area_t size = container_layout.size;
 
     bui_draw_rect(
@@ -461,7 +457,7 @@ void ui_end_container(ui_wctx_t *wctx)
             });
     }
 
-    ui_advance_layout(
+    bui_advance_layout(
         wctx,
         container_layout.size.width + container_layout.outer_margin.l
             + container_layout.outer_margin.r,
@@ -471,13 +467,13 @@ void ui_end_container(ui_wctx_t *wctx)
 
 static bool _ui_has_visible_space(ui_wctx_t *wctx)
 {
-    return _ui_get_available_space(wctx, UI_LAYOUT_HORIZONTAL) > 0
-           && _ui_get_available_space(wctx, UI_LAYOUT_VERTICAL) > 0;
+    return bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL) > 0
+           && bui_get_available_space(wctx, BUI_LAYOUT_VERTICAL) > 0;
 }
 
-void ui_label(ui_wctx_t *wctx, const char *label)
+void bui_label(ui_wctx_t *wctx, const char *label)
 {
-    bui_layout_t *layout = ui_get_layout(wctx);
+    bui_layout_t *layout = bui_get_layout(wctx);
     if (!layout)
         return;
     bui_area_t text_area = bui_get_text_area(&_default_font, label);
@@ -490,8 +486,8 @@ void ui_label(ui_wctx_t *wctx, const char *label)
         (bui_area_t){
             .x = layout->cursor_pos_x,
             .y = layout->cursor_pos_y,
-            .width = _ui_get_available_space(wctx, UI_LAYOUT_HORIZONTAL),
-            .height = _ui_get_available_space(wctx, UI_LAYOUT_VERTICAL),
+            .width = bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL),
+            .height = bui_get_available_space(wctx, BUI_LAYOUT_VERTICAL),
         });
     bui_draw_text(
         wctx,
@@ -501,7 +497,7 @@ void ui_label(ui_wctx_t *wctx, const char *label)
         label);
     bui_reset_clip(wctx);
 
-    ui_advance_layout(wctx, text_area.width, text_area.height);
+    bui_advance_layout(wctx, text_area.width, text_area.height);
 }
 
 bool ui_is_mouse_in_area(ui_wctx_t *wctx, bui_area_t area)
@@ -532,88 +528,7 @@ bool ui_is_key_up(ui_wctx_t *wctx, bui_keyboard_scancode_t keycode)
     return !wctx || keycode >= 256 || wctx->keyboard_keys[keycode] == BUI_KEY_STATE_UP;
 }
 
-bool ui_button(ui_wctx_t *wctx, const char *label)
-{
-    bui_layout_t *layout = ui_get_layout(wctx);
-    if (!layout)
-        return false;
-    bui_area_t text_area = bui_get_text_area(&_default_font, label);
-    bui_area_t button_area = {
-        .x = layout->cursor_pos_x,
-        .y = layout->cursor_pos_y,
-        .width = text_area.width + DEFAULT_PADDING * 2,
-        .height = text_area.height + DEFAULT_PADDING * 2,
-    };
-
-    if (!_ui_has_visible_space(wctx))
-        return false;
-
-    bui_set_clip(
-        wctx,
-        (bui_area_t){
-            .x = layout->cursor_pos_x,
-            .y = layout->cursor_pos_y,
-            .width = _ui_get_available_space(wctx, UI_LAYOUT_HORIZONTAL),
-            .height = _ui_get_available_space(wctx, UI_LAYOUT_VERTICAL),
-        });
-    bui_draw_filled_rect(
-        wctx,
-        (bui_rect_t){
-            .x = button_area.x,
-            .y = button_area.y,
-            .width = button_area.width,
-            .height = button_area.height,
-            .border_color = BORDER_COLOR,
-            .border_thickness = BORDER_THICKNESS,
-        },
-        SECONDARY_BACKGROUND_COLOR);
-    if (button_area.width > BORDER_THICKNESS * 2 && button_area.height > BORDER_THICKNESS * 2) {
-        bui_draw_rect(
-            wctx,
-            (bui_rect_t){
-                .x = button_area.x + BORDER_THICKNESS,
-                .y = button_area.y + BORDER_THICKNESS,
-                .width = button_area.width - BORDER_THICKNESS * 2,
-                .height = button_area.height - BORDER_THICKNESS * 2,
-                .border_color = BORDER_SHADOW,
-                .border_thickness = BORDER_THICKNESS,
-            });
-    }
-    bui_draw_text(
-        wctx,
-        &_default_font,
-        (bui_pos_t){
-            .x = button_area.x + text_area.x + DEFAULT_PADDING,
-            .y = button_area.y + text_area.y + DEFAULT_PADDING,
-        },
-        TEXT_COLOR,
-        label);
-    bui_reset_clip(wctx);
-
-    ui_advance_layout(wctx, button_area.width, button_area.height);
-
-    return wctx->last_event.type == BUI_EVENT_MOUSE_BUTTON_DOWN
-           && wctx->last_event.mouse_button.button == BUI_MOUSE_BUTTON_LEFT
-           && ui_is_mouse_in_area(wctx, button_area);
-}
-
-ui_textbox_state_t ui_new_textbox_state(char *buffer, size_t buffer_size)
-{
-    return (ui_textbox_state_t){.buffer = buffer, .buffer_size = buffer_size, .focused = false};
-}
-
-static void _ui_textbox_append(ui_textbox_state_t *state, const char *text)
-{
-    if (!state || !state->buffer || state->buffer_size == 0 || !text)
-        return;
-    size_t len = strlen(state->buffer);
-    if (len >= state->buffer_size - 1)
-        return;
-    size_t remaining = state->buffer_size - 1 - len;
-    strncat(state->buffer, text, remaining);
-}
-
-static char _ui_textbox_char_from_key(ui_wctx_t *wctx, bui_keyboard_scancode_t key)
+char ui_char_from_key_scancode(ui_wctx_t *wctx, bui_keyboard_scancode_t key)
 {
     if (ui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_LCTRL)
         || ui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_LALT))
@@ -747,28 +662,116 @@ static char _ui_textbox_char_from_key(ui_wctx_t *wctx, bui_keyboard_scancode_t k
     }
 }
 
-void ui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state)
+bool bui_button(ui_wctx_t *wctx, const char *label)
 {
-    bui_layout_t *layout = ui_get_layout(wctx);
-    if (!layout || !state)
-        return;
-    bui_area_t textbox_area = {
+    bui_layout_t *layout = bui_get_layout(wctx);
+    if (!layout)
+        return false;
+    bui_area_t text_area = bui_get_text_area(&_default_font, label);
+    bui_area_t button_area = {
         .x = layout->cursor_pos_x,
         .y = layout->cursor_pos_y,
-        .width = _ui_get_available_space(wctx, UI_LAYOUT_HORIZONTAL),
-        .height = 13 + DEFAULT_PADDING * 2,
+        .width = text_area.width + DEFAULT_PADDING * 2,
+        .height = _default_font.height + DEFAULT_PADDING,
     };
 
     if (!_ui_has_visible_space(wctx))
-        return;
+        return false;
 
     bui_set_clip(
         wctx,
         (bui_area_t){
             .x = layout->cursor_pos_x,
             .y = layout->cursor_pos_y,
-            .width = _ui_get_available_space(wctx, UI_LAYOUT_HORIZONTAL),
-            .height = _ui_get_available_space(wctx, UI_LAYOUT_VERTICAL),
+            .width = bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL),
+            .height = bui_get_available_space(wctx, BUI_LAYOUT_VERTICAL),
+        });
+    bui_draw_filled_rect(
+        wctx,
+        (bui_rect_t){
+            .x = button_area.x,
+            .y = button_area.y,
+            .width = button_area.width,
+            .height = button_area.height,
+            .border_color = BORDER_COLOR,
+            .border_thickness = BORDER_THICKNESS,
+        },
+        SECONDARY_BACKGROUND_COLOR);
+    if (button_area.width > BORDER_THICKNESS * 2 && button_area.height > BORDER_THICKNESS * 2) {
+        bui_draw_rect(
+            wctx,
+            (bui_rect_t){
+                .x = button_area.x + BORDER_THICKNESS,
+                .y = button_area.y + BORDER_THICKNESS,
+                .width = button_area.width - BORDER_THICKNESS * 2,
+                .height = button_area.height - BORDER_THICKNESS * 2,
+                .border_color = BORDER_SHADOW,
+                .border_thickness = BORDER_THICKNESS,
+            });
+    }
+    bui_draw_text(
+        wctx,
+        &_default_font,
+        (bui_pos_t){
+            .x = button_area.x + text_area.x + DEFAULT_PADDING,
+            .y = button_area.y + text_area.y + DEFAULT_PADDING,
+        },
+        TEXT_COLOR,
+        label);
+    bui_reset_clip(wctx);
+
+    bui_advance_layout(wctx, button_area.width, button_area.height);
+
+    return wctx->last_event.type == BUI_EVENT_MOUSE_BUTTON_DOWN
+           && wctx->last_event.mouse_button.button == BUI_MOUSE_BUTTON_LEFT
+           && ui_is_mouse_in_area(wctx, button_area);
+}
+
+ui_textbox_state_t bui_new_textbox_state(char *buffer, size_t size)
+{
+    return (ui_textbox_state_t){.buffer = buffer, .size = size, .cursor = 0, .focused = false};
+}
+
+void bui_reset_textbox(ui_textbox_state_t *state)
+{
+    if (!state)
+        return;
+    state->cursor = 0;
+    state->buffer[0] = '\0';
+}
+
+static void _ui_textbox_append(ui_textbox_state_t *state, char c)
+{
+    if (!state || !state->buffer || state->size == 0 || c == '\0')
+        return;
+    if (state->cursor >= state->size - 1)
+        return;
+    state->buffer[state->cursor++] = c;
+    state->buffer[state->cursor] = '\0';
+}
+
+bool bui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state, uint32_t width)
+{
+    bui_layout_t *layout = bui_get_layout(wctx);
+    if (!layout || !state)
+        return false;
+    bui_area_t textbox_area = {
+        .x = layout->cursor_pos_x,
+        .y = layout->cursor_pos_y,
+        .width = width == UINT32_MAX ? bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL) : width,
+        .height = _default_font.height + DEFAULT_PADDING,
+    };
+
+    if (!_ui_has_visible_space(wctx))
+        return false;
+
+    bui_set_clip(
+        wctx,
+        (bui_area_t){
+            .x = layout->cursor_pos_x,
+            .y = layout->cursor_pos_y,
+            .width = bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL),
+            .height = bui_get_available_space(wctx, BUI_LAYOUT_VERTICAL),
         });
     bui_draw_filled_rect(
         wctx,
@@ -801,19 +804,17 @@ void ui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state)
     if (state->focused
         && (wctx->last_event.type == BUI_EVENT_KEY_DOWN
             || wctx->last_event.type == BUI_EVENT_KEY_HOLD)) {
-        char text[2] = {_ui_textbox_char_from_key(wctx, wctx->last_event.keyboard), '\0'};
-        if (text[0] != '\0')
-            _ui_textbox_append(state, text);
+        _ui_textbox_append(state, ui_char_from_key_scancode(wctx, wctx->last_event.keyboard));
     }
 
     if (state->focused
         && (wctx->last_event.type == BUI_EVENT_KEY_DOWN
             || wctx->last_event.type == BUI_EVENT_KEY_HOLD)
         && wctx->last_event.keyboard == BUI_KEYBOARD_SCANCODE_BACKSPACE && state->buffer
-        && state->buffer[0] != '\0')
-        state->buffer[strlen(state->buffer) - 1] = '\0';
+        && state->cursor > 0)
+        state->buffer[--state->cursor] = '\0';
 
-    if (state->buffer && state->buffer[0] != '\0') {
+    if (state->buffer && state->cursor > 0) {
         bui_area_t text_area = bui_get_text_area(&_default_font, state->buffer);
         bui_draw_text(
             wctx,
@@ -843,5 +844,8 @@ void ui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state)
     }
     bui_reset_clip(wctx);
 
-    ui_advance_layout(wctx, textbox_area.width, textbox_area.height);
+    bui_advance_layout(wctx, textbox_area.width, textbox_area.height);
+
+    return state->focused && wctx->last_event.type == BUI_EVENT_KEY_DOWN
+           && wctx->last_event.keyboard == BUI_KEYBOARD_SCANCODE_ENTER;
 }
