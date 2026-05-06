@@ -110,6 +110,12 @@ typedef struct
     uint32_t pos_x, pos_y;
 } bui_mouse_button_event_t;
 
+typedef struct
+{
+    uint32_t pos_x, pos_y;
+    int32_t delta_x, delta_y;
+} bui_mouse_wheel_event_t;
+
 typedef enum {
     BUI_EVENT_NONE = 0,
     BUI_EVENT_WINDOW_CREATED,
@@ -121,6 +127,7 @@ typedef enum {
     BUI_EVENT_MOUSE_MOVE,
     BUI_EVENT_MOUSE_BUTTON_DOWN,
     BUI_EVENT_MOUSE_BUTTON_UP,
+    BUI_EVENT_MOUSE_WHEEL,
 } bui_event_type_t;
 
 typedef enum {
@@ -138,5 +145,6 @@ typedef struct
         bui_keyboard_scancode_t keyboard;
         bui_mouse_button_event_t mouse_button;
         bui_mouse_move_event_t mouse_move;
+        bui_mouse_wheel_event_t mouse_wheel;
     };
 } bui_event_t;

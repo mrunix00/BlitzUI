@@ -281,6 +281,9 @@ bool bui_poll_events(bui_event_t *event)
     case SDL_EVENT_MOUSE_MOTION:
         window_id = sdl_event.motion.windowID;
         break;
+    case SDL_EVENT_MOUSE_WHEEL:
+        window_id = sdl_event.wheel.windowID;
+        break;
     default:
         return false;
     }
@@ -347,6 +350,14 @@ bool bui_poll_events(bui_event_t *event)
         event->mouse_move.pos_y = (uint32_t) sdl_event.motion.y;
         event->mouse_move.delta_x = (uint32_t) sdl_event.motion.xrel;
         event->mouse_move.delta_y = (uint32_t) sdl_event.motion.yrel;
+        break;
+    case SDL_EVENT_MOUSE_WHEEL:
+        event->window_id = sdl_event.wheel.windowID;
+        event->type = BUI_EVENT_MOUSE_WHEEL;
+        event->mouse_wheel.pos_x = (uint32_t) sdl_event.wheel.mouse_x;
+        event->mouse_wheel.pos_y = (uint32_t) sdl_event.wheel.mouse_y;
+        event->mouse_wheel.delta_x = (int32_t) sdl_event.wheel.x;
+        event->mouse_wheel.delta_y = (int32_t) sdl_event.wheel.y;
         break;
     default:
         return false;

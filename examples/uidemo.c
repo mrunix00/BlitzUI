@@ -3,7 +3,6 @@
  */
 
 #include <libui/libui.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -46,14 +45,17 @@ int main()
     if (!bui_init_context(&ctx))
         return 1;
 
-    bui_wctx_t *window = bui_new_window(&ctx, "UIDemo", 300, 200, (bui_window_flags_t){.resizable = true});
+    bui_wctx_t *window
+        = bui_new_window(&ctx, "UIDemo", 300, 200, (bui_window_flags_t){.resizable = true});
     if (window == NULL) {
         bui_deinit_context(&ctx);
         return 1;
     }
 
     char textbox_buffer[256] = {0};
-    bui_textbox_state_t textbox_state = bui_new_textbox_state(textbox_buffer, sizeof(textbox_buffer));
+    bui_textbox_state_t textbox_state
+        = bui_new_textbox_state(textbox_buffer, sizeof(textbox_buffer));
+    uint32_t list_scroll_y = 0;
     list_t list = list_new(10);
     while (bui_pump_events(&ctx)) {
         if (!bui_begin_window(window))
@@ -74,10 +76,11 @@ int main()
                 }
             });
 
-            BUI_CONTAINER(window, -1, -1, (bui_rtlb_t){0}, ((bui_rtlb_t){7, 7, 7, 2}), {
-                for (size_t i = list.count; i > 0; i--)
-                    bui_label(window, list.items[i - 1]);
-            });
+            BUI_CONTAINER(
+                window, -1, -1, (bui_rtlb_t){0}, ((bui_rtlb_t){7, 7, 7, 7}), NULL, &list_scroll_y, {
+                    for (size_t i = list.count; i > 0; i--)
+                        bui_label(window, list.items[i - 1]);
+                });
         });
 
         bui_end_window(window);

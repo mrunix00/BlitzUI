@@ -20,6 +20,9 @@
 #define BORDER_COLOR (bui_color_t){0xFF, 0x00, 0x00, 0x00}
 #define BORDER_THICKNESS 1
 #define BORDER_SHADOW (bui_color_t){0x33, 0xFF, 0xFF, 0xFF}
+#define SCROLLBAR_COLOR (bui_color_t){0x80, 0xB3, 0xB3, 0xB3}
+#define SCROLLBAR_WIDTH 6
+#define SCROLL_STEP 20
 
 static bui_font_t _default_font = {
     .atlas = font_atlas,
@@ -35,6 +38,96 @@ static bui_font_t _default_font = {
 static inline uint32_t _sub_or_zero(uint32_t lhs, uint32_t rhs)
 {
     return lhs > rhs ? lhs - rhs : 0;
+}
+
+static inline uint32_t _add_or_zero(uint32_t value, int32_t delta)
+{
+    return delta < 0 ? _sub_or_zero(value, (uint32_t) -delta) : value + (uint32_t) delta;
+}
+
+static bui_area_t _bui_layout_clip_area(bui_layout_t *layout)
+{
+    uint32_t width
+        = _sub_or_zero(layout->size.width, layout->inner_margin.l + layout->inner_margin.r);
+    uint32_t height
+        = _sub_or_zero(layout->size.height, layout->inner_margin.t + layout->inner_margin.b);
+    if (layout->scroll_y)
+        width = _sub_or_zero(width, SCROLLBAR_WIDTH);
+    if (layout->scroll_x)
+        height = _sub_or_zero(height, SCROLLBAR_WIDTH);
+    return (bui_area_t){
+        .x = layout->size.x + layout->inner_margin.l,
+        .y = layout->size.y + layout->inner_margin.t,
+        .width = width,
+        .height = height,
+    };
+}
+
+static bool _bui_area_intersects(bui_area_t lhs, bui_area_t rhs)
+{
+    return lhs.x < rhs.x + rhs.width && lhs.x + lhs.width > rhs.x && lhs.y < rhs.y + rhs.height
+           && lhs.y + lhs.height > rhs.y;
+}
+
+static bool _bui_area_contains(bui_area_t area, uint32_t x, uint32_t y)
+{
+    return x >= area.x && x < area.x + area.width && y >= area.y && y < area.y + area.height;
+}
+
+static uint32_t _bui_scroll_from_thumb_pos(
+    uint32_t thumb_pos,
+    uint32_t track_pos,
+    uint32_t track_size,
+    uint32_t thumb_size,
+    uint32_t max_scroll)
+{
+    uint32_t travel = _sub_or_zero(track_size, thumb_size);
+    if (travel == 0 || max_scroll == 0)
+        return 0;
+    if (thumb_pos < track_pos)
+        thumb_pos = track_pos;
+    if (thumb_pos > track_pos + travel)
+        thumb_pos = track_pos + travel;
+    return (uint32_t) (((uint64_t) (thumb_pos - track_pos) * max_scroll) / travel);
+}
+
+static uint32_t _bui_scroll_thumb_size(uint32_t track_size, uint32_t content_size)
+{
+    uint32_t thumb_size = track_size * track_size / content_size;
+    if (thumb_size < SCROLLBAR_WIDTH)
+        thumb_size = SCROLLBAR_WIDTH;
+    if (thumb_size > track_size)
+        thumb_size = track_size;
+    return thumb_size;
+}
+
+static uint32_t _bui_scroll_thumb_pos(
+    uint32_t track_pos,
+    uint32_t track_size,
+    uint32_t thumb_size,
+    uint32_t scroll,
+    uint32_t max_scroll)
+{
+    if (max_scroll == 0)
+        return track_pos;
+    return track_pos + (uint32_t) (((uint64_t) scroll * (track_size - thumb_size)) / max_scroll);
+}
+
+static uint32_t _bui_get_pos_x(bui_layout_t *layout)
+{
+    return _sub_or_zero(layout->cursor_pos_x, layout->scroll_offset_x);
+}
+
+static uint32_t _bui_get_pos_y(bui_layout_t *layout)
+{
+    return _sub_or_zero(layout->cursor_pos_y, layout->scroll_offset_y);
+}
+
+static uint32_t _bui_remaining_clip_width(bui_area_t clip, uint32_t x)
+{
+    if (x <= clip.x)
+        return clip.width;
+    return _sub_or_zero(clip.x + clip.width, x);
 }
 
 static bui_wctx_t *_bui_find_window_by_id(bui_ctx_t *ctx, uint32_t window_id)
@@ -185,6 +278,10 @@ bool bui_pump_events(bui_ctx_t *ctx)
         wctx->mouse_state.pos_y = event.mouse_button.pos_y;
         wctx->mouse_state.buttons_state &= (uint8_t) ~event.mouse_button.button;
         break;
+    case BUI_EVENT_MOUSE_WHEEL:
+        wctx->mouse_state.pos_x = event.mouse_wheel.pos_x;
+        wctx->mouse_state.pos_y = event.mouse_wheel.pos_y;
+        break;
     default:
         break;
     }
@@ -290,12 +387,16 @@ uint32_t bui_get_available_space(bui_wctx_t *wctx, bui_layout_type_t layout_type
     if (!current)
         return 0;
     if (layout_type == BUI_LAYOUT_VERTICAL) {
+        if (current->scroll_y)
+            return UINT32_MAX / 4;
         uint32_t height
             = _sub_or_zero(current->size.height, current->inner_margin.t + current->inner_margin.b);
         uint32_t used
             = _sub_or_zero(current->cursor_pos_y, current->size.y + current->inner_margin.t);
         return _sub_or_zero(height, used);
     } else if (layout_type == BUI_LAYOUT_HORIZONTAL) {
+        if (current->scroll_x)
+            return UINT32_MAX / 4;
         uint32_t width
             = _sub_or_zero(current->size.width, current->inner_margin.l + current->inner_margin.r);
         uint32_t used
@@ -388,7 +489,9 @@ void bui_begin_container(
     uint32_t width,
     uint32_t height,
     bui_rtlb_t outer_margin,
-    bui_rtlb_t inner_margin)
+    bui_rtlb_t inner_margin,
+    uint32_t *scroll_x,
+    uint32_t *scroll_y)
 {
     bui_layout_t *current = bui_get_layout(wctx);
     if (!current)
@@ -407,25 +510,101 @@ void bui_begin_container(
     if (fit_height || layout_height > available_height)
         layout_height = available_height;
 
+    bui_area_t size = {
+        .x = current->cursor_pos_x + outer_margin.l,
+        .y = current->cursor_pos_y + outer_margin.t,
+        .width = layout_width,
+        .height = layout_height,
+    };
+
+    if ((scroll_x || scroll_y) && wctx->last_event.type == BUI_EVENT_MOUSE_WHEEL
+        && bui_is_mouse_in_area(wctx, size)) {
+        if (scroll_x)
+            *scroll_x = _add_or_zero(*scroll_x, -wctx->last_event.mouse_wheel.delta_x * SCROLL_STEP);
+        if (scroll_y)
+            *scroll_y = _add_or_zero(*scroll_y, -wctx->last_event.mouse_wheel.delta_y * SCROLL_STEP);
+    }
+
     bui_push_layout(
         wctx,
         (bui_layout_t){
             .type = BUI_LAYOUT_VERTICAL,
-            .size = (bui_area_t){
-                .x = current->cursor_pos_x + outer_margin.l,
-                .y = current->cursor_pos_y + outer_margin.t,
-                .width = layout_width,
-                .height = layout_height,
-            },
+            .size = size,
             .inner_margin = inner_margin,
             .outer_margin = outer_margin,
-            .cursor_pos_x = current->cursor_pos_x + outer_margin.l + inner_margin.l,
-            .cursor_pos_y = current->cursor_pos_y + outer_margin.t + inner_margin.t,
+            .cursor_pos_x = size.x + inner_margin.l,
+            .cursor_pos_y = size.y + inner_margin.t,
             .padding_x = 0,
             .padding_y = DEFAULT_PADDING,
+            .scroll_x = scroll_x,
+            .scroll_y = scroll_y,
+            .scroll_offset_x = scroll_x ? *scroll_x : 0,
+            .scroll_offset_y = scroll_y ? *scroll_y : 0,
             .fit_width = fit_width,
             .fit_height = fit_height,
         });
+}
+
+static void _bui_draw_scrollbar(bui_wctx_t *ctx, bui_layout_t *layout, bui_area_t clip, bool vertical)
+{
+    uint32_t *scroll = vertical ? layout->scroll_y : layout->scroll_x;
+    if (!scroll)
+        return;
+
+    uint32_t content_size = vertical ? layout->content_height : layout->content_width;
+    uint32_t track_pos = vertical ? clip.y : clip.x;
+    uint32_t track_size = vertical ? clip.height : clip.width;
+    uint32_t max_scroll = _sub_or_zero(content_size, track_size);
+    if (*scroll > max_scroll)
+        *scroll = max_scroll;
+    if (max_scroll == 0 || track_size == 0)
+        return;
+
+    uint32_t bar_size = _bui_scroll_thumb_size(track_size, content_size);
+    uint32_t bar_pos = _bui_scroll_thumb_pos(track_pos, track_size, bar_size, *scroll, max_scroll);
+    bui_area_t bar_area
+        = vertical
+              ? (bui_area_t){.x = clip.x + clip.width, .y = bar_pos, .width = SCROLLBAR_WIDTH, .height = bar_size}
+              : (bui_area_t){
+                    .x = bar_pos,
+                    .y = clip.y + clip.height,
+                    .width = bar_size,
+                    .height = SCROLLBAR_WIDTH};
+
+    uint32_t mouse_pos = vertical ? ctx->mouse_state.pos_y : ctx->mouse_state.pos_x;
+    if (ctx->last_event.type == BUI_EVENT_MOUSE_BUTTON_DOWN
+        && ctx->last_event.mouse_button.button == BUI_MOUSE_BUTTON_LEFT
+        && _bui_area_contains(bar_area, ctx->mouse_state.pos_x, ctx->mouse_state.pos_y)) {
+        ctx->scrollbar_drag_scroll = scroll;
+        ctx->scrollbar_drag_vertical = vertical;
+        ctx->scrollbar_drag_offset = mouse_pos - bar_pos;
+    }
+
+    if (ctx->scrollbar_drag_scroll == scroll && ctx->scrollbar_drag_vertical == vertical) {
+        if (bui_is_mouse_button_down(ctx, BUI_MOUSE_BUTTON_LEFT)) {
+            uint32_t desired_thumb_pos = _sub_or_zero(mouse_pos, ctx->scrollbar_drag_offset);
+            *scroll = _bui_scroll_from_thumb_pos(
+                desired_thumb_pos, track_pos, track_size, bar_size, max_scroll);
+            bar_pos = _bui_scroll_thumb_pos(track_pos, track_size, bar_size, *scroll, max_scroll);
+            if (vertical)
+                bar_area.y = bar_pos;
+            else
+                bar_area.x = bar_pos;
+        } else {
+            ctx->scrollbar_drag_scroll = NULL;
+            ctx->scrollbar_drag_offset = 0;
+        }
+    }
+
+    bui_draw_filled_rect(
+        ctx,
+        (bui_rect_t){
+            .x = bar_area.x,
+            .y = bar_area.y,
+            .width = bar_area.width,
+            .height = bar_area.height,
+        },
+        SCROLLBAR_COLOR);
 }
 
 void bui_end_container(bui_wctx_t *wctx)
@@ -457,6 +636,10 @@ void bui_end_container(bui_wctx_t *wctx)
             });
     }
 
+    bui_area_t clip = _bui_layout_clip_area(&container_layout);
+    _bui_draw_scrollbar(wctx, &container_layout, clip, true);
+    _bui_draw_scrollbar(wctx, &container_layout, clip, false);
+
     bui_advance_layout(
         wctx,
         container_layout.size.width + container_layout.outer_margin.l
@@ -477,22 +660,24 @@ void bui_label(bui_wctx_t *wctx, const char *label)
     if (!layout)
         return;
     bui_area_t text_area = bui_get_text_area(&_default_font, label);
+    bui_area_t clip = _bui_layout_clip_area(layout);
+    bui_area_t item_area = {
+        .x = _bui_get_pos_x(layout),
+        .y = _bui_get_pos_y(layout),
+        .width = text_area.width,
+        .height = text_area.height,
+    };
 
-    if (!_bui_has_visible_space(wctx))
+    if (!_bui_has_visible_space(wctx) || !_bui_area_intersects(item_area, clip)) {
+        bui_advance_layout(wctx, text_area.width, text_area.height);
         return;
+    }
 
-    bui_set_clip(
-        wctx,
-        (bui_area_t){
-            .x = layout->cursor_pos_x,
-            .y = layout->cursor_pos_y,
-            .width = bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL),
-            .height = bui_get_available_space(wctx, BUI_LAYOUT_VERTICAL),
-        });
+    bui_set_clip(wctx, clip);
     bui_draw_text(
         wctx,
         &_default_font,
-        (bui_pos_t){layout->cursor_pos_x + text_area.x, layout->cursor_pos_y + text_area.y},
+        (bui_pos_t){item_area.x + text_area.x, item_area.y + text_area.y},
         TEXT_COLOR,
         label);
     bui_reset_clip(wctx);
@@ -669,23 +854,19 @@ bool bui_button(bui_wctx_t *wctx, const char *label)
         return false;
     bui_area_t text_area = bui_get_text_area(&_default_font, label);
     bui_area_t button_area = {
-        .x = layout->cursor_pos_x,
-        .y = layout->cursor_pos_y,
+        .x = _bui_get_pos_x(layout),
+        .y = _bui_get_pos_y(layout),
         .width = text_area.width + DEFAULT_PADDING * 2,
         .height = _default_font.height + DEFAULT_PADDING,
     };
+    bui_area_t clip = _bui_layout_clip_area(layout);
 
-    if (!_bui_has_visible_space(wctx))
+    if (!_bui_has_visible_space(wctx) || !_bui_area_intersects(button_area, clip)) {
+        bui_advance_layout(wctx, button_area.width, button_area.height);
         return false;
+    }
 
-    bui_set_clip(
-        wctx,
-        (bui_area_t){
-            .x = layout->cursor_pos_x,
-            .y = layout->cursor_pos_y,
-            .width = bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL),
-            .height = bui_get_available_space(wctx, BUI_LAYOUT_VERTICAL),
-        });
+    bui_set_clip(wctx, clip);
     bui_draw_filled_rect(
         wctx,
         (bui_rect_t){
@@ -755,24 +936,21 @@ bool bui_textbox(bui_wctx_t *wctx, bui_textbox_state_t *state, uint32_t width)
     bui_layout_t *layout = bui_get_layout(wctx);
     if (!layout || !state)
         return false;
+    bui_area_t clip = _bui_layout_clip_area(layout);
+    uint32_t x = _bui_get_pos_x(layout);
     bui_area_t textbox_area = {
-        .x = layout->cursor_pos_x,
-        .y = layout->cursor_pos_y,
-        .width = width == UINT32_MAX ? bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL) : width,
+        .x = x,
+        .y = _bui_get_pos_y(layout),
+        .width = width == UINT32_MAX ? _bui_remaining_clip_width(clip, x) : width,
         .height = _default_font.height + DEFAULT_PADDING,
     };
 
-    if (!_bui_has_visible_space(wctx))
+    if (!_bui_has_visible_space(wctx) || !_bui_area_intersects(textbox_area, clip)) {
+        bui_advance_layout(wctx, textbox_area.width, textbox_area.height);
         return false;
+    }
 
-    bui_set_clip(
-        wctx,
-        (bui_area_t){
-            .x = layout->cursor_pos_x,
-            .y = layout->cursor_pos_y,
-            .width = bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL),
-            .height = bui_get_available_space(wctx, BUI_LAYOUT_VERTICAL),
-        });
+    bui_set_clip(wctx, clip);
     bui_draw_filled_rect(
         wctx,
         (bui_rect_t){

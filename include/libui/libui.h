@@ -25,8 +25,8 @@ extern "C" {
     {body}; \
     bui_end_row(window)
 
-#define BUI_CONTAINER(window, width, height, outer_margin, inner_margin, body) \
-    bui_begin_container(window, width, height, outer_margin, inner_margin); \
+#define BUI_CONTAINER(window, width, height, outer_margin, inner_margin, scroll_x, scroll_y, body) \
+    bui_begin_container(window, width, height, outer_margin, inner_margin, scroll_x, scroll_y); \
     body; \
     bui_end_container(window)
 
@@ -105,6 +105,8 @@ typedef struct
     uint32_t cursor_pos_x, cursor_pos_y;
     uint32_t content_width, content_height;
     uint32_t padding_x, padding_y;
+    uint32_t *scroll_x, *scroll_y;
+    uint32_t scroll_offset_x, scroll_offset_y;
     bool fit_width, fit_height;
 } bui_layout_t;
 
@@ -131,6 +133,9 @@ struct _bui_wctx
     size_t layout_capacity;
     bui_mouse_state_t mouse_state;
     bui_key_state_t keyboard_keys[256];
+    uint32_t *scrollbar_drag_scroll;
+    uint32_t scrollbar_drag_offset;
+    bool scrollbar_drag_vertical;
     bui_event_t last_event;
     bool close_requested;
 };
@@ -174,7 +179,9 @@ void bui_begin_container(
     uint32_t width,
     uint32_t height,
     bui_rtlb_t outer_margin,
-    bui_rtlb_t inner_margin);
+    bui_rtlb_t inner_margin,
+    uint32_t *scroll_x,
+    uint32_t *scroll_y);
 void bui_end_container(bui_wctx_t *wctx);
 
 void bui_label(bui_wctx_t *wctx, const char *label);
