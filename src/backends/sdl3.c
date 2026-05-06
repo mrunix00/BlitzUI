@@ -26,7 +26,7 @@ static void _set_draw_color(SDL_Renderer *renderer, bui_color_t color)
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
 }
 
-static bui_sdl3_context_t *_ctx(ui_wctx_t *wctx)
+static bui_sdl3_context_t *_ctx(bui_wctx_t *wctx)
 {
     return wctx ? (bui_sdl3_context_t *) wctx->gfx_context : NULL;
 }
@@ -43,7 +43,7 @@ static void _fill_window_size(SDL_Window *window, bui_window_resized_event_t *si
 
 static bool _is_sdl3_initialized = false;
 
-bool bui_gfx_init(ui_wctx_t *wctx)
+bool bui_gfx_init(bui_wctx_t *wctx)
 {
     if (!_is_sdl3_initialized) {
         if (!SDL_Init(SDL_INIT_VIDEO))
@@ -84,7 +84,7 @@ bool bui_gfx_init(ui_wctx_t *wctx)
     return true;
 }
 
-void bui_gfx_destroy(ui_wctx_t *wctx)
+void bui_gfx_destroy(bui_wctx_t *wctx)
 {
     bui_sdl3_context_t *ctx = _ctx(wctx);
     if (!ctx)
@@ -360,7 +360,7 @@ void bui_delay(uint32_t ms)
     SDL_Delay(ms);
 }
 
-void bui_begin_frame(ui_wctx_t *wctx)
+void bui_begin_frame(bui_wctx_t *wctx)
 {
     bui_sdl3_context_t *ctx = _ctx(wctx);
     if (!ctx)
@@ -368,7 +368,7 @@ void bui_begin_frame(ui_wctx_t *wctx)
     SDL_SetRenderClipRect(ctx->renderer, NULL);
 }
 
-void bui_end_frame(ui_wctx_t *wctx)
+void bui_end_frame(bui_wctx_t *wctx)
 {
     bui_sdl3_context_t *ctx = _ctx(wctx);
     if (!ctx)
@@ -376,7 +376,7 @@ void bui_end_frame(ui_wctx_t *wctx)
     SDL_RenderPresent(ctx->renderer);
 }
 
-void bui_set_clip(ui_wctx_t *wctx, bui_area_t rect)
+void bui_set_clip(bui_wctx_t *wctx, bui_area_t rect)
 {
     bui_sdl3_context_t *ctx = _ctx(wctx);
     if (!ctx)
@@ -390,14 +390,14 @@ void bui_set_clip(ui_wctx_t *wctx, bui_area_t rect)
     SDL_SetRenderClipRect(ctx->renderer, &sdl_rect);
 }
 
-void bui_reset_clip(ui_wctx_t *wctx)
+void bui_reset_clip(bui_wctx_t *wctx)
 {
     bui_sdl3_context_t *ctx = _ctx(wctx);
     if (ctx)
         SDL_SetRenderClipRect(ctx->renderer, NULL);
 }
 
-void bui_draw_filled_rect(ui_wctx_t *wctx, bui_rect_t rect, bui_color_t color)
+void bui_draw_filled_rect(bui_wctx_t *wctx, bui_rect_t rect, bui_color_t color)
 {
     bui_sdl3_context_t *ctx = _ctx(wctx);
     if (!ctx)
@@ -414,7 +414,7 @@ void bui_draw_filled_rect(ui_wctx_t *wctx, bui_rect_t rect, bui_color_t color)
         bui_draw_rect(wctx, rect);
 }
 
-void bui_draw_rect(ui_wctx_t *wctx, bui_rect_t rect)
+void bui_draw_rect(bui_wctx_t *wctx, bui_rect_t rect)
 {
     bui_sdl3_context_t *ctx = _ctx(wctx);
     if (!ctx)
@@ -433,7 +433,7 @@ void bui_draw_rect(ui_wctx_t *wctx, bui_rect_t rect)
     }
 }
 
-void bui_draw_line(ui_wctx_t *wctx, bui_line_t line, bui_color_t color)
+void bui_draw_line(bui_wctx_t *wctx, bui_line_t line, bui_color_t color)
 {
     bui_sdl3_context_t *ctx = _ctx(wctx);
     if (!ctx)
@@ -514,7 +514,7 @@ static void _font_visual_metrics(bui_font_t *font, int32_t *ascent, uint32_t *li
 }
 
 void bui_draw_text(
-    ui_wctx_t *wctx, bui_font_t *font, bui_pos_t pos, bui_color_t color, const char *text)
+    bui_wctx_t *wctx, bui_font_t *font, bui_pos_t pos, bui_color_t color, const char *text)
 {
     bui_sdl3_context_t *ctx = _ctx(wctx);
     if (!ctx || !font || !text)

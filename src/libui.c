@@ -37,9 +37,9 @@ static inline uint32_t _sub_or_zero(uint32_t lhs, uint32_t rhs)
     return lhs > rhs ? lhs - rhs : 0;
 }
 
-static ui_wctx_t *_ui_find_window_by_id(ui_ctx_t *ctx, uint32_t window_id)
+static bui_wctx_t *_bui_find_window_by_id(bui_ctx_t *ctx, uint32_t window_id)
 {
-    ui_wctx_t *current = ctx->first_window;
+    bui_wctx_t *current = ctx->first_window;
     while (current) {
         if (current->window_id == window_id)
             return current;
@@ -48,32 +48,32 @@ static ui_wctx_t *_ui_find_window_by_id(ui_ctx_t *ctx, uint32_t window_id)
     return NULL;
 }
 
-static void _ui_clear_transient_events(ui_ctx_t *ctx)
+static void _bui_clear_transient_events(bui_ctx_t *ctx)
 {
-    for (ui_wctx_t *wctx = ctx->first_window; wctx; wctx = wctx->next)
+    for (bui_wctx_t *wctx = ctx->first_window; wctx; wctx = wctx->next)
         wctx->last_event = (bui_event_t){0};
 }
 
-bool bui_init_context(ui_ctx_t *ctx)
+bool bui_init_context(bui_ctx_t *ctx)
 {
-    memset(ctx, 0, sizeof(ui_ctx_t));
+    memset(ctx, 0, sizeof(bui_ctx_t));
     ctx->running = true;
     return true;
 }
 
-void bui_deinit_context(ui_ctx_t *ctx)
+void bui_deinit_context(bui_ctx_t *ctx)
 {
-    ui_wctx_t *current = ctx->first_window;
+    bui_wctx_t *current = ctx->first_window;
     while (current) {
-        ui_wctx_t *next = current->next;
+        bui_wctx_t *next = current->next;
         bui_destroy_window(ctx, current);
         current = next;
     }
 }
 
-ui_wctx_t *bui_new_window(ui_ctx_t *ctx, const char *title, int w, int h, window_flags_t flags)
+bui_wctx_t *bui_new_window(bui_ctx_t *ctx, const char *title, int w, int h, bui_window_flags_t flags)
 {
-    ui_wctx_t *wctx = calloc(1, sizeof(ui_wctx_t));
+    bui_wctx_t *wctx = calloc(1, sizeof(bui_wctx_t));
     if (!wctx)
         return NULL;
 
@@ -81,7 +81,7 @@ ui_wctx_t *bui_new_window(ui_ctx_t *ctx, const char *title, int w, int h, window
     wctx->flags = flags;
     wctx->width = w;
     wctx->height = h;
-    wctx->state = UI_WINDOW_STATE_ACTIVE;
+    wctx->state = BUI_WINDOW_STATE_ACTIVE;
 
     if (!bui_gfx_init(wctx)) {
         free(wctx);
@@ -105,7 +105,7 @@ ui_wctx_t *bui_new_window(ui_ctx_t *ctx, const char *title, int w, int h, window
     return wctx;
 }
 
-void bui_destroy_window(ui_ctx_t *ctx, ui_wctx_t *wctx)
+void bui_destroy_window(bui_ctx_t *ctx, bui_wctx_t *wctx)
 {
     if (!wctx)
         return;
@@ -121,12 +121,12 @@ void bui_destroy_window(ui_ctx_t *ctx, ui_wctx_t *wctx)
     free(wctx);
 }
 
-bool bui_pump_events(ui_ctx_t *ctx)
+bool bui_pump_events(bui_ctx_t *ctx)
 {
     if (!ctx || !ctx->running || ctx->first_window == NULL)
         return false;
 
-    _ui_clear_transient_events(ctx);
+    _bui_clear_transient_events(ctx);
 
     bui_event_t event = {0};
     if (!bui_poll_events(&event)) {
@@ -134,7 +134,7 @@ bool bui_pump_events(ui_ctx_t *ctx)
         return true;
     }
 
-    ui_wctx_t *wctx = _ui_find_window_by_id(ctx, event.window_id);
+    bui_wctx_t *wctx = _bui_find_window_by_id(ctx, event.window_id);
     if (!wctx && event.type != BUI_EVENT_WINDOW_CLOSED)
         return true;
 
@@ -144,7 +144,7 @@ bool bui_pump_events(ui_ctx_t *ctx)
     if (event.type == BUI_EVENT_WINDOW_CLOSED) {
         if (wctx) {
             wctx->close_requested = true;
-            wctx->state = UI_WINDOW_STATE_PENDING;
+            wctx->state = BUI_WINDOW_STATE_PENDING;
         }
         ctx->running = false;
         return false;
@@ -192,9 +192,9 @@ bool bui_pump_events(ui_ctx_t *ctx)
     return true;
 }
 
-bool bui_begin_window(ui_wctx_t *wctx)
+bool bui_begin_window(bui_wctx_t *wctx)
 {
-    if (!wctx || wctx->state != UI_WINDOW_STATE_ACTIVE)
+    if (!wctx || wctx->state != BUI_WINDOW_STATE_ACTIVE)
         return false;
 
     wctx->layout_count = 0;
@@ -219,15 +219,15 @@ bool bui_begin_window(ui_wctx_t *wctx)
     return true;
 }
 
-bool bui_end_window(ui_wctx_t *wctx)
+bool bui_end_window(bui_wctx_t *wctx)
 {
-    if (!wctx || wctx->state != UI_WINDOW_STATE_ACTIVE)
+    if (!wctx || wctx->state != BUI_WINDOW_STATE_ACTIVE)
         return false;
     bui_end_frame(wctx);
     return true;
 }
 
-bool bui_push_layout(ui_wctx_t *wctx, bui_layout_t layout)
+bool bui_push_layout(bui_wctx_t *wctx, bui_layout_t layout)
 {
     if (wctx->layout_count >= wctx->layout_capacity) {
         size_t new_capacity = wctx->layout_capacity * 2;
@@ -241,14 +241,14 @@ bool bui_push_layout(ui_wctx_t *wctx, bui_layout_t layout)
     return true;
 }
 
-bui_layout_t *bui_get_layout(ui_wctx_t *wctx)
+bui_layout_t *bui_get_layout(bui_wctx_t *wctx)
 {
     if (!wctx || wctx->layout_count == 0)
         return NULL;
     return &wctx->layout_stack[wctx->layout_count - 1];
 }
 
-void bui_advance_layout(ui_wctx_t *wctx, uint32_t w, uint32_t h)
+void bui_advance_layout(bui_wctx_t *wctx, uint32_t w, uint32_t h)
 {
     bui_layout_t *current = bui_get_layout(wctx);
     if (!current)
@@ -272,7 +272,7 @@ void bui_advance_layout(ui_wctx_t *wctx, uint32_t w, uint32_t h)
     }
 }
 
-bui_layout_t bui_pop_layout(ui_wctx_t *wctx)
+bui_layout_t bui_pop_layout(bui_wctx_t *wctx)
 {
     if (!wctx || wctx->layout_count == 0)
         return (bui_layout_t){0};
@@ -284,7 +284,7 @@ bui_layout_t bui_pop_layout(ui_wctx_t *wctx)
     return result;
 }
 
-uint32_t bui_get_available_space(ui_wctx_t *wctx, bui_layout_type_t layout_type)
+uint32_t bui_get_available_space(bui_wctx_t *wctx, bui_layout_type_t layout_type)
 {
     bui_layout_t *current = bui_get_layout(wctx);
     if (!current)
@@ -305,7 +305,7 @@ uint32_t bui_get_available_space(ui_wctx_t *wctx, bui_layout_type_t layout_type)
     return 0;
 }
 
-void bui_begin_column(ui_wctx_t *wctx, bui_rtlb_t margin)
+void bui_begin_column(bui_wctx_t *wctx, bui_rtlb_t margin)
 {
     bui_layout_t *current = bui_get_layout(wctx);
     if (!current)
@@ -335,7 +335,7 @@ void bui_begin_column(ui_wctx_t *wctx, bui_rtlb_t margin)
         });
 }
 
-void bui_end_column(ui_wctx_t *wctx)
+void bui_end_column(bui_wctx_t *wctx)
 {
     bui_layout_t column_layout = bui_pop_layout(wctx);
     bui_advance_layout(
@@ -344,7 +344,7 @@ void bui_end_column(ui_wctx_t *wctx)
         column_layout.size.height + column_layout.outer_margin.t + column_layout.outer_margin.b);
 }
 
-void bui_begin_row(ui_wctx_t *wctx, bui_rtlb_t margin)
+void bui_begin_row(bui_wctx_t *wctx, bui_rtlb_t margin)
 {
     bui_layout_t *current = bui_get_layout(wctx);
     if (!current)
@@ -374,7 +374,7 @@ void bui_begin_row(ui_wctx_t *wctx, bui_rtlb_t margin)
         });
 }
 
-void bui_end_row(ui_wctx_t *wctx)
+void bui_end_row(bui_wctx_t *wctx)
 {
     bui_layout_t row_layout = bui_pop_layout(wctx);
     bui_advance_layout(
@@ -384,7 +384,7 @@ void bui_end_row(ui_wctx_t *wctx)
 }
 
 void bui_begin_container(
-    ui_wctx_t *wctx,
+    bui_wctx_t *wctx,
     uint32_t width,
     uint32_t height,
     bui_rtlb_t outer_margin,
@@ -428,7 +428,7 @@ void bui_begin_container(
         });
 }
 
-void bui_end_container(ui_wctx_t *wctx)
+void bui_end_container(bui_wctx_t *wctx)
 {
     bui_layout_t container_layout = bui_pop_layout(wctx);
     bui_area_t size = container_layout.size;
@@ -465,20 +465,20 @@ void bui_end_container(ui_wctx_t *wctx)
             + container_layout.outer_margin.b);
 }
 
-static bool _ui_has_visible_space(ui_wctx_t *wctx)
+static bool _bui_has_visible_space(bui_wctx_t *wctx)
 {
     return bui_get_available_space(wctx, BUI_LAYOUT_HORIZONTAL) > 0
            && bui_get_available_space(wctx, BUI_LAYOUT_VERTICAL) > 0;
 }
 
-void bui_label(ui_wctx_t *wctx, const char *label)
+void bui_label(bui_wctx_t *wctx, const char *label)
 {
     bui_layout_t *layout = bui_get_layout(wctx);
     if (!layout)
         return;
     bui_area_t text_area = bui_get_text_area(&_default_font, label);
 
-    if (!_ui_has_visible_space(wctx))
+    if (!_bui_has_visible_space(wctx))
         return;
 
     bui_set_clip(
@@ -500,42 +500,42 @@ void bui_label(ui_wctx_t *wctx, const char *label)
     bui_advance_layout(wctx, text_area.width, text_area.height);
 }
 
-bool ui_is_mouse_in_area(ui_wctx_t *wctx, bui_area_t area)
+bool bui_is_mouse_in_area(bui_wctx_t *wctx, bui_area_t area)
 {
     return wctx->mouse_state.pos_x >= area.x && wctx->mouse_state.pos_x < area.x + area.width
            && wctx->mouse_state.pos_y >= area.y && wctx->mouse_state.pos_y < area.y + area.height;
 }
 
-bui_pos_t ui_get_mouse_pos(ui_wctx_t *wctx)
+bui_pos_t bui_get_mouse_pos(bui_wctx_t *wctx)
 {
     return (bui_pos_t){wctx->mouse_state.pos_x, wctx->mouse_state.pos_y};
 }
 
-bool ui_is_mouse_button_down(ui_wctx_t *wctx, bui_mouse_button_t button)
+bool bui_is_mouse_button_down(bui_wctx_t *wctx, bui_mouse_button_t button)
 {
     return (wctx->mouse_state.buttons_state & button) != 0;
 }
 
-bool ui_is_key_down(ui_wctx_t *wctx, bui_keyboard_scancode_t keycode)
+bool bui_is_key_down(bui_wctx_t *wctx, bui_keyboard_scancode_t keycode)
 {
     return wctx && keycode < 256
            && (wctx->keyboard_keys[keycode] == BUI_KEY_STATE_DOWN
                || wctx->keyboard_keys[keycode] == BUI_KEY_STATE_HOLD);
 }
 
-bool ui_is_key_up(ui_wctx_t *wctx, bui_keyboard_scancode_t keycode)
+bool bui_is_key_up(bui_wctx_t *wctx, bui_keyboard_scancode_t keycode)
 {
     return !wctx || keycode >= 256 || wctx->keyboard_keys[keycode] == BUI_KEY_STATE_UP;
 }
 
-char ui_char_from_key_scancode(ui_wctx_t *wctx, bui_keyboard_scancode_t key)
+char bui_char_from_key_scancode(bui_wctx_t *wctx, bui_keyboard_scancode_t key)
 {
-    if (ui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_LCTRL)
-        || ui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_LALT))
+    if (bui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_LCTRL)
+        || bui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_LALT))
         return '\0';
 
-    bool shifted = ui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_LSHIFT)
-                   || ui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_RSHIFT);
+    bool shifted = bui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_LSHIFT)
+                   || bui_is_key_down(wctx, BUI_KEYBOARD_SCANCODE_RSHIFT);
 
     char ch = '\0';
     switch (key) {
@@ -662,7 +662,7 @@ char ui_char_from_key_scancode(ui_wctx_t *wctx, bui_keyboard_scancode_t key)
     }
 }
 
-bool bui_button(ui_wctx_t *wctx, const char *label)
+bool bui_button(bui_wctx_t *wctx, const char *label)
 {
     bui_layout_t *layout = bui_get_layout(wctx);
     if (!layout)
@@ -675,7 +675,7 @@ bool bui_button(ui_wctx_t *wctx, const char *label)
         .height = _default_font.height + DEFAULT_PADDING,
     };
 
-    if (!_ui_has_visible_space(wctx))
+    if (!_bui_has_visible_space(wctx))
         return false;
 
     bui_set_clip(
@@ -724,15 +724,15 @@ bool bui_button(ui_wctx_t *wctx, const char *label)
 
     return wctx->last_event.type == BUI_EVENT_MOUSE_BUTTON_DOWN
            && wctx->last_event.mouse_button.button == BUI_MOUSE_BUTTON_LEFT
-           && ui_is_mouse_in_area(wctx, button_area);
+           && bui_is_mouse_in_area(wctx, button_area);
 }
 
-ui_textbox_state_t bui_new_textbox_state(char *buffer, size_t size)
+bui_textbox_state_t bui_new_textbox_state(char *buffer, size_t size)
 {
-    return (ui_textbox_state_t){.buffer = buffer, .size = size, .cursor = 0, .focused = false};
+    return (bui_textbox_state_t){.buffer = buffer, .size = size, .cursor = 0, .focused = false};
 }
 
-void bui_reset_textbox(ui_textbox_state_t *state)
+void bui_reset_textbox(bui_textbox_state_t *state)
 {
     if (!state)
         return;
@@ -740,7 +740,7 @@ void bui_reset_textbox(ui_textbox_state_t *state)
     state->buffer[0] = '\0';
 }
 
-static void _ui_textbox_append(ui_textbox_state_t *state, char c)
+static void _bui_textbox_append(bui_textbox_state_t *state, char c)
 {
     if (!state || !state->buffer || state->size == 0 || c == '\0')
         return;
@@ -750,7 +750,7 @@ static void _ui_textbox_append(ui_textbox_state_t *state, char c)
     state->buffer[state->cursor] = '\0';
 }
 
-bool bui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state, uint32_t width)
+bool bui_textbox(bui_wctx_t *wctx, bui_textbox_state_t *state, uint32_t width)
 {
     bui_layout_t *layout = bui_get_layout(wctx);
     if (!layout || !state)
@@ -762,7 +762,7 @@ bool bui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state, uint32_t width)
         .height = _default_font.height + DEFAULT_PADDING,
     };
 
-    if (!_ui_has_visible_space(wctx))
+    if (!_bui_has_visible_space(wctx))
         return false;
 
     bui_set_clip(
@@ -799,12 +799,12 @@ bool bui_textbox(ui_wctx_t *wctx, ui_textbox_state_t *state, uint32_t width)
 
     if (wctx->last_event.type == BUI_EVENT_MOUSE_BUTTON_DOWN
         && wctx->last_event.mouse_button.button == BUI_MOUSE_BUTTON_LEFT)
-        state->focused = ui_is_mouse_in_area(wctx, textbox_area);
+        state->focused = bui_is_mouse_in_area(wctx, textbox_area);
 
     if (state->focused
         && (wctx->last_event.type == BUI_EVENT_KEY_DOWN
             || wctx->last_event.type == BUI_EVENT_KEY_HOLD)) {
-        _ui_textbox_append(state, ui_char_from_key_scancode(wctx, wctx->last_event.keyboard));
+        _bui_textbox_append(state, bui_char_from_key_scancode(wctx, wctx->last_event.keyboard));
     }
 
     if (state->focused

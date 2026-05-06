@@ -42,28 +42,28 @@ void list_push(list_t *list, const char *item)
 
 int main()
 {
-    ui_ctx_t ctx = {0};
+    bui_ctx_t ctx = {0};
     if (!bui_init_context(&ctx))
         return 1;
 
-    ui_wctx_t *window = bui_new_window(&ctx, "UIDemo", 300, 200, (window_flags_t){.resizable = true});
+    bui_wctx_t *window = bui_new_window(&ctx, "UIDemo", 300, 200, (bui_window_flags_t){.resizable = true});
     if (window == NULL) {
         bui_deinit_context(&ctx);
         return 1;
     }
 
     char textbox_buffer[256] = {0};
-    ui_textbox_state_t textbox_state = bui_new_textbox_state(textbox_buffer, sizeof(textbox_buffer));
+    bui_textbox_state_t textbox_state = bui_new_textbox_state(textbox_buffer, sizeof(textbox_buffer));
     list_t list = list_new(10);
     while (bui_pump_events(&ctx)) {
         if (!bui_begin_window(window))
             continue;
 
-        BUI_COLUMN(window, ((ui_rtlb_t){.r = 5, .t = 5, .l = 5, .b = 5}), {
+        BUI_COLUMN(window, ((bui_rtlb_t){.r = 5, .t = 5, .l = 5, .b = 5}), {
             bui_label(window, "Hello, World!");
             bui_label(window, "This is libui on SDL3");
 
-            BUI_ROW(window, (ui_rtlb_t){0}, {
+            BUI_ROW(window, (bui_rtlb_t){0}, {
                 if (bui_button(window, "Submit")) {
                     list_push(&list, textbox_buffer);
                     bui_reset_textbox(&textbox_state);

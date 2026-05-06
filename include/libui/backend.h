@@ -14,12 +14,12 @@ extern "C" {
 /*
  * Initialize the graphics context for the given window.
  */
-bool bui_gfx_init(ui_wctx_t *wctx);
+bool bui_gfx_init(bui_wctx_t *wctx);
 
 /*
  * Destroy the graphics context for the given window.
  */
-void bui_gfx_destroy(ui_wctx_t *wctx);
+void bui_gfx_destroy(bui_wctx_t *wctx);
 
 /*
  * Destroy the graphics context for the given window.
@@ -34,42 +34,42 @@ void bui_delay(uint32_t ms);
 /*
  * Begin a new frame for the given window context.
  */
-void bui_begin_frame(ui_wctx_t *wctx);
+void bui_begin_frame(bui_wctx_t *wctx);
 
 /*
  * End the current frame for the given window context.
  */
-void bui_end_frame(ui_wctx_t *wctx);
+void bui_end_frame(bui_wctx_t *wctx);
 
 /*
  * Set the clip region for the given window context.
  */
-void bui_set_clip(ui_wctx_t *wctx, bui_area_t rect);
+void bui_set_clip(bui_wctx_t *wctx, bui_area_t rect);
 
 /*
  * Reset the clip region for the given window context.
  */
-void bui_reset_clip(ui_wctx_t *wctx);
+void bui_reset_clip(bui_wctx_t *wctx);
 
 /*
  * Draw a rectangle outline.
  */
-void bui_draw_rect(ui_wctx_t *wctx, bui_rect_t rect);
+void bui_draw_rect(bui_wctx_t *wctx, bui_rect_t rect);
 
 /*
  * Draw a filled rectangle with the given color.
  */
-void bui_draw_filled_rect(ui_wctx_t *wctx, bui_rect_t rect, bui_color_t color);
+void bui_draw_filled_rect(bui_wctx_t *wctx, bui_rect_t rect, bui_color_t color);
 
 /*
  * Draw a line with the given color.
  */
-void bui_draw_line(ui_wctx_t *wctx, bui_line_t line, bui_color_t color);
+void bui_draw_line(bui_wctx_t *wctx, bui_line_t line, bui_color_t color);
 
 /*
  * Draw text with the given font and color at the given position.
  */
-void bui_draw_text(ui_wctx_t *wctx, bui_font_t *font, bui_pos_t, bui_color_t, const char *text);
+void bui_draw_text(bui_wctx_t *wctx, bui_font_t *font, bui_pos_t, bui_color_t, const char *text);
 
 /*
  * Get the area occupied by the given text with the given font.
