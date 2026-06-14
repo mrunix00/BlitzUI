@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <libui/libui.h>
+#include <libui/types.h>
 
 #ifdef __cplusplus
 extern "C" {

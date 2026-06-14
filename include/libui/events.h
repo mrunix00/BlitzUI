@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#define BUI_TEXT_INPUT_MAX 32
+
 typedef struct
 {
     uint32_t width;
@@ -90,6 +92,8 @@ typedef enum {
     BUI_KEYBOARD_SCANCODE_RIGHT = 0x68,
     BUI_KEYBOARD_SCANCODE_DOWN = 0x6A,
     BUI_KEYBOARD_SCANCODE_DELETE = 0x6D,
+    BUI_KEYBOARD_SCANCODE_HOME = 0x6E,
+    BUI_KEYBOARD_SCANCODE_END = 0x6F,
 } bui_keyboard_scancode_t;
 
 typedef enum {
@@ -116,6 +120,11 @@ typedef struct
     int32_t delta_x, delta_y;
 } bui_mouse_wheel_event_t;
 
+typedef struct
+{
+    char text[BUI_TEXT_INPUT_MAX];
+} bui_text_input_event_t;
+
 typedef enum {
     BUI_EVENT_NONE = 0,
     BUI_EVENT_WINDOW_CREATED,
@@ -128,6 +137,7 @@ typedef enum {
     BUI_EVENT_MOUSE_BUTTON_DOWN,
     BUI_EVENT_MOUSE_BUTTON_UP,
     BUI_EVENT_MOUSE_WHEEL,
+    BUI_EVENT_TEXT_INPUT,
 } bui_event_type_t;
 
 typedef enum {
@@ -146,5 +156,6 @@ typedef struct
         bui_mouse_button_event_t mouse_button;
         bui_mouse_move_event_t mouse_move;
         bui_mouse_wheel_event_t mouse_wheel;
+        bui_text_input_event_t text_input;
     };
 } bui_event_t;

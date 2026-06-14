@@ -14,6 +14,8 @@ typedef struct
     SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Texture *font_texture;
+    bui_font_t *font_texture_font;
+    const uint8_t *font_texture_atlas;
 } bui_sdl3_context_t;
 
 static SDL_Color _bui_to_sdl_color(bui_color_t color)
@@ -65,6 +67,7 @@ bool bui_gfx_init(bui_wctx_t *wctx)
         return false;
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_StartTextInput(window);
 
     bui_sdl3_context_t *ctx = calloc(1, sizeof(*ctx));
     if (ctx == NULL) {
@@ -91,6 +94,8 @@ void bui_gfx_destroy(bui_wctx_t *wctx)
         return;
     if (ctx->font_texture)
         SDL_DestroyTexture(ctx->font_texture);
+    if (ctx->window)
+        SDL_StopTextInput(ctx->window);
     if (ctx->renderer)
         SDL_DestroyRenderer(ctx->renderer);
     if (ctx->window)
@@ -250,6 +255,10 @@ static bui_keyboard_scancode_t _ui_translate_scancode(SDL_Scancode scancode)
         return BUI_KEYBOARD_SCANCODE_DOWN;
     case SDL_SCANCODE_DELETE:
         return BUI_KEYBOARD_SCANCODE_DELETE;
+    case SDL_SCANCODE_HOME:
+        return BUI_KEYBOARD_SCANCODE_HOME;
+    case SDL_SCANCODE_END:
+        return BUI_KEYBOARD_SCANCODE_END;
     default:
         return BUI_KEYBOARD_SCANCODE_NULL;
     }
@@ -273,6 +282,9 @@ bool bui_poll_events(bui_event_t *event)
     case SDL_EVENT_KEY_DOWN:
     case SDL_EVENT_KEY_UP:
         window_id = sdl_event.key.windowID;
+        break;
+    case SDL_EVENT_TEXT_INPUT:
+        window_id = sdl_event.text.windowID;
         break;
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
     case SDL_EVENT_MOUSE_BUTTON_UP:
@@ -314,6 +326,11 @@ bool bui_poll_events(bui_event_t *event)
         event->window_id = sdl_event.key.windowID;
         event->type = BUI_EVENT_KEY_UP;
         event->keyboard = _ui_translate_scancode(sdl_event.key.scancode);
+        break;
+    case SDL_EVENT_TEXT_INPUT:
+        event->window_id = sdl_event.text.windowID;
+        event->type = BUI_EVENT_TEXT_INPUT;
+        SDL_strlcpy(event->text_input.text, sdl_event.text.text, sizeof(event->text_input.text));
         break;
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
         if (sdl_event.button.button == SDL_BUTTON_LEFT)
@@ -467,8 +484,15 @@ static SDL_Texture *_get_font_texture(bui_sdl3_context_t *ctx, bui_font_t *font,
     (void) color;
     if (!ctx || !font || !font->atlas)
         return NULL;
-    if (ctx->font_texture)
+    if (ctx->font_texture && ctx->font_texture_font == font && ctx->font_texture_atlas == font->atlas)
         return ctx->font_texture;
+
+    if (ctx->font_texture) {
+        SDL_DestroyTexture(ctx->font_texture);
+        ctx->font_texture = NULL;
+        ctx->font_texture_font = NULL;
+        ctx->font_texture_atlas = NULL;
+    }
 
     SDL_Surface *surface = SDL_CreateSurface(
         (int) font->atlas_width, (int) font->atlas_height, SDL_PIXELFORMAT_RGBA32);
@@ -487,8 +511,11 @@ static SDL_Texture *_get_font_texture(bui_sdl3_context_t *ctx, bui_font_t *font,
 
     ctx->font_texture = SDL_CreateTextureFromSurface(ctx->renderer, surface);
     SDL_DestroySurface(surface);
-    if (ctx->font_texture)
+    if (ctx->font_texture) {
         SDL_SetTextureBlendMode(ctx->font_texture, SDL_BLENDMODE_BLEND);
+        ctx->font_texture_font = font;
+        ctx->font_texture_atlas = font->atlas;
+    }
     return ctx->font_texture;
 }
 
@@ -560,7 +587,7 @@ void bui_draw_text(
             };
             SDL_FRect dst = {
                 .x = pen_x + (float) glyph->x_offset,
-                .y = baseline_y + (float) (int32_t) glyph->y_offset,
+                .y = baseline_y + (float) glyph->y_offset,
                 .w = (float) glyph->width,
                 .h = (float) glyph->height,
             };

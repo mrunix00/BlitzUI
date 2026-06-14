@@ -3,41 +3,13 @@
  */
 
 #include <libui/libui.h>
-#include <stdlib.h>
+#include <libui/widgets/button.h>
+#include <libui/widgets/column.h>
+#include <libui/widgets/container.h>
+#include <libui/widgets/row.h>
+#include <libui/widgets/text.h>
+#include <libui/widgets/textbox.h>
 #include <string.h>
-
-typedef struct
-{
-    char **items;
-    size_t count;
-    size_t capacity;
-} list_t;
-
-list_t list_new(size_t capacity)
-{
-    list_t list;
-    list.items = malloc(capacity * sizeof(char *));
-    if (list.items == NULL) {
-        return (list_t){0};
-    }
-    list.count = 0;
-    list.capacity = capacity;
-    return list;
-}
-
-void list_free(list_t *list)
-{
-    free(list->items);
-}
-
-void list_push(list_t *list, const char *item)
-{
-    if (list->count == list->capacity)
-        return;
-    size_t len = strlen(item);
-    list->items[list->count++] = malloc(len + 1);
-    memcpy(list->items[list->count - 1], item, len + 1);
-}
 
 int main()
 {
@@ -45,45 +17,42 @@ int main()
     if (!bui_init_context(&ctx))
         return 1;
 
-    bui_wctx_t *window
+    static char list[256][256] = {0};
+    size_t list_count = 0;
+
+    bui_wctx_t *w
         = bui_new_window(&ctx, "UIDemo", 300, 200, (bui_window_flags_t){.resizable = true});
-    if (window == NULL) {
+    if (w == NULL) {
         bui_deinit_context(&ctx);
         return 1;
     }
 
     char textbox_buffer[256] = {0};
-    bui_textbox_state_t textbox_state
-        = bui_new_textbox_state(textbox_buffer, sizeof(textbox_buffer));
-    uint32_t list_scroll_y = 0;
-    list_t list = list_new(10);
     while (bui_pump_events(&ctx)) {
-        if (!bui_begin_window(window))
-            continue;
+        BUI_WINDOW(w, {
+            BUI_COLUMN(w, -1, -1, {
+                bui_text(w, "Hello, World!");
+                bui_text(w, "This is libui on SDL3");
 
-        BUI_COLUMN(window, ((bui_rtlb_t){.r = 5, .t = 5, .l = 5, .b = 5}), {
-            bui_label(window, "Hello, World!");
-            bui_label(window, "This is libui on SDL3");
+                BUI_CONTAINER(w, -1, -1, {
+                    for (size_t i = 0; i < list_count; i++)
+                        bui_text(w, list[i]);
+                });
 
-            BUI_ROW(window, (bui_rtlb_t){0}, {
-                if (bui_button(window, "Submit")) {
-                    list_push(&list, textbox_buffer);
-                    bui_reset_textbox(&textbox_state);
-                }
-                if (bui_textbox(window, &textbox_state, -1)) {
-                    list_push(&list, textbox_buffer);
-                    bui_reset_textbox(&textbox_state);
+                bool submit;
+                bui_widget_event_t button_state;
+                BUI_ROW(w, -1, 0, {
+                    submit = bui_textbox(w, "Text Input", textbox_buffer, sizeof(textbox_buffer));
+                    button_state = bui_button(w, "Submit");
+                });
+
+                if (submit || (button_state & BUI_WIDGET_EVENT_LCLICKED)) {
+                    strncpy(list[list_count], textbox_buffer, sizeof(list[list_count]) - 1);
+                    list_count++;
+                    textbox_buffer[0] = '\0';
                 }
             });
-
-            BUI_CONTAINER(
-                window, -1, -1, (bui_rtlb_t){0}, ((bui_rtlb_t){7, 7, 7, 7}), NULL, &list_scroll_y, {
-                    for (size_t i = list.count; i > 0; i--)
-                        bui_label(window, list.items[i - 1]);
-                });
         });
-
-        bui_end_window(window);
     }
 
     bui_deinit_context(&ctx);

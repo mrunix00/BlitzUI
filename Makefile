@@ -11,6 +11,15 @@ DEMO_NAME := uidemo
 
 SRC := \
 	src/libui.c \
+	src/autolayout.c \
+	src/memory.c \
+	src/font.c \
+	src/widgets/button.c \
+	src/widgets/column.c \
+	src/widgets/container.c \
+	src/widgets/row.c \
+	src/widgets/text.c \
+	src/widgets/textbox.c \
 	src/backends/sdl3.c
 OBJ := $(SRC:%.c=$(BUILD_DIR)/%.o)
 DEP := $(OBJ:.o=.d)
@@ -25,6 +34,7 @@ CPPFLAGS += -Iinclude $(SDL3_CFLAGS)
 CFLAGS ?= -std=c11 -O2 -g
 CFLAGS += -Wall -Wextra -Wpedantic
 LDLIBS += $(SDL3_LIBS)
+LDLIBS += -lm
 
 .PHONY: all lib demo clean install uninstall check-sdl3
 
