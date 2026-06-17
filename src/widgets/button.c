@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0
  */
 
+#include "libui/types.h"
 #include <libui/backend.h>
 #include <libui/libui.h>
 #include <libui/widgets/button.h>
@@ -19,6 +20,9 @@ static bui_widget_event_t _consume_button_event(bui_wctx_t *wctx, bui_id_t id)
 
 static void _draw_button(bui_wctx_t *ctx, bui_widget_t *widget)
 {
+    bui_color_t fill_color = bui_is_mouse_in_area(ctx, widget->computed_area)
+                                 ? (bui_color_t){0xFF, 0x30, 0x30, 0x30}
+                                 : widget->theme->background_color;
     bui_draw_filled_rect(
         ctx,
         (bui_rect_t){
@@ -29,7 +33,7 @@ static void _draw_button(bui_wctx_t *ctx, bui_widget_t *widget)
             .border_thickness = widget->theme->border_thickness,
             .border_color = widget->theme->border_color,
         },
-        widget->theme->background_color);
+        fill_color);
     bui_draw_rect(
         ctx,
         (bui_rect_t){
