@@ -12,17 +12,6 @@
 
 #define INITIAL_STACK_CAPACITY 16
 
-#define DEFAULT_PADDING 7
-#define BACKGROUND_COLOR (bui_color_t){0xFF, 0x21, 0x21, 0x21}
-#define SECONDARY_BACKGROUND_COLOR (bui_color_t){0xFF, 0x18, 0x18, 0x18}
-#define TEXT_COLOR (bui_color_t){0xFF, 0xB3, 0xB3, 0xB3}
-#define BORDER_COLOR (bui_color_t){0xFF, 0x00, 0x00, 0x00}
-#define BORDER_THICKNESS 1
-#define BORDER_SHADOW (bui_color_t){0x33, 0xFF, 0xFF, 0xFF}
-#define SCROLLBAR_COLOR (bui_color_t){0x80, 0xB3, 0xB3, 0xB3}
-#define SCROLLBAR_WIDTH 6
-#define SCROLL_STEP 20
-
 void bui_autolayout(bui_wctx_t *wctx);
 static bui_widget_t *_bui_find_widget_by_id(bui_widget_t *widget, bui_id_t id);
 
@@ -377,14 +366,14 @@ bool bui_begin_window(bui_wctx_t *wctx)
         wctx->themes_tail = NULL;
         bui_theme_t default_theme = (bui_theme_t){
             .font = bui_get_default_font(),
-            .inner_padding = {DEFAULT_PADDING, DEFAULT_PADDING, DEFAULT_PADDING, DEFAULT_PADDING},
-            .foreground_color = TEXT_COLOR,
-            .background_color = BACKGROUND_COLOR,
-            .border_color = BORDER_COLOR,
-            .shadow_color = BORDER_SHADOW,
-            .border_thickness = BORDER_THICKNESS,
-            .shadow_thickness = BORDER_THICKNESS,
-            .spacing = DEFAULT_PADDING,
+            .inner_padding = {7, 7, 7, 7},
+            .foreground_color = {0xFF, 0xB3, 0xB3, 0xB3},
+            .background_color = {0xFF, 0x21, 0x21, 0x21},
+            .border_color = {0xFF, 0x00, 0x00, 0x00},
+            .shadow_color = {0x33, 0xFF, 0xFF, 0xFF},
+            .border_thickness = 1,
+            .shadow_thickness = 1,
+            .spacing = 7,
         };
         bui_push_theme(wctx, &default_theme);
 
